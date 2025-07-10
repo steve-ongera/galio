@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">shop list left sidebar</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- page wrapper start -->
+<div class="page-main-wrapper">
+    <div class="container">
+        <div class="row">
+            <!-- sidebar start -->
+            <div class="col-lg-3 order-2 order-lg-1">
+                <div class="shop-sidebar-wrap mt-md-28 mt-sm-28">
+                    <!-- sidebar categorie start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-category">
+                            <ul>
+                                <li class="title"><i class="fa fa-bars"></i> categories</li>
+                                {% for category in categories %}
+                                <li>
+                                    <a href="#">{{ category.name }}</a>
+                                    <span>({{ category.products.count }})</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- sidebar categorie start -->
+
+                    <!-- manufacturer start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>Manufacturers</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <ul>
+                                {% for brand in brands %}
+                                <li>
+                                    <i class="fa fa-angle-right"></i>
+                                    <a href="#">{{ brand.name }}</a>
+                                    <span>({{ brand.product.count }})</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- manufacturer end -->
+
+                    <!-- pricing filter start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>filter by price</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <div class="price-range-wrap">
+                                <div class="price-range" data-min="50" data-max="400"></div>
+                                <div class="range-slider">
+                                    <form action="#" class="d-flex justify-content-between">
+                                        <button class="filter-btn">filter</button>
+                                        <div class="price-input d-flex align-items-center">
+                                            <label for="amount">Price: </label>
+                                            <input type="text" id="amount">
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- pricing filter end -->
+
+                    <!-- product size start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>size</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <ul>
+                                <li><i class="fa fa-angle-right"></i><a href="#">s</a><span>(10)</span></li>
+                                <li><i class="fa fa-angle-right"></i><a href="#">m</a><span>(12)</span></li>
+                                <li><i class="fa fa-angle-right"></i><a href="#">l</a><span>(20)</span></li>
+                                <li><i class="fa fa-angle-right"></i><a href="#">XL</a><span>(12)</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- product size end -->
+
+                    <!-- product tag start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>tags</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <div class="product-tag">
+                                {% for category in categories|slice:":8" %}
+                                <a href="#">{{ category.name }}</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- product tag end -->
+
+                    <!-- sidebar banner start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="img-container fix img-full">
+                            <a href="#"><img src="#" alt="banner"></a>
+                        </div>
+                    </div>
+                    <!-- sidebar banner end -->
+                </div>
+            </div>
+            <!-- sidebar end -->
+
+            <!-- product main wrap start -->
+            <div class="col-lg-9 order-1 order-lg-2">
+                <div class="shop-banner img-full">
+                    <img src="{% static 'assets/img/banner/banner_static1.jp'%}g" alt="">
+                </div>
+                <!-- product view wrapper area start -->
+                <div class="shop-product-wrapper pt-34">
+                    <!-- shop product top wrap start -->
+                    <div class="shop-top-bar">
+                        <div class="row">
+                            <div class="col-lg-7 col-md-6">
+                                <div class="top-bar-left">
+                                    <div class="product-view-mode mr-70 mr-sm-0">
+                                        <a href="#" data-target="grid"><i class="fa fa-th"></i></a>
+                                        <a class="active" href="#" data-target="list"><i class="fa fa-list"></i></a>
+                                    </div>
+                                    <div class="product-amount">
+                                        <p>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_products }} results</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5 col-md-6">
+                                <div class="top-bar-right">
+                                    <div class="product-short">
+                                        <p>Sort By : </p>
+                                        <select class="nice-select" name="sortby">
+                                            <option value="trending">Relevance</option>
+                                            <option value="sales">Name (A - Z)</option>
+                                            <option value="sales">Name (Z - A)</option>
+                                            <option value="rating">Price (Low &gt; High)</option>
+                                            <option value="date">Rating (Lowest)</option>
+                                            <option value="price-asc">Model (A - Z)</option>
+                                            <option value="price-asc">Model (Z - A)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- shop product top wrap start -->
+
+                    <!-- product item start -->
+                    <div class="shop-product-wrap list row">
+                        {% for product in products %}
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <!-- product single grid item start -->
+                            <div class="product-item fix mb-30">
+                                <div class="product-thumb">
+                                    <a href="{{ product.get_absolute_url }}">
+                                        {% with product.images.all|first as first_image %}
+                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% endwith %}
+                                    </a>
+                                    {% if product.is_featured or product.is_hot_deal %}
+                                    <div class="product-label">
+                                        <span>hot</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="product-action-link">
+                                        <a href="#" data-toggle="modal" data-target="#quick_view"> 
+                                            <span data-toggle="tooltip" data-placement="left" title="Quick view">
+                                                <i class="fa fa-search"></i>
+                                            </span> 
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="left" title="Wishlist">
+                                            <i class="fa fa-heart-o"></i>
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="left" title="Compare">
+                                            <i class="fa fa-refresh"></i>
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="left" title="Add to cart">
+                                            <i class="fa fa-shopping-cart"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="product-content">
+                                    <h4><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h4>
+                                    <div class="pricebox">
+                                        {% if product.is_on_sale %}
+                                        <span class="regular-price">ksh{{ product.price }}</span>
+                                        <span class="old-price"><del>ksh{{ product.compare_price }}</del></span>
+                                        {% else %}
+                                        <span class="regular-price">ksh{{ product.price }}</span>
+                                        {% endif %}
+                                        <div class="ratings">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= product.average_rating %}
+                                                <span class="good"><i class="fa fa-star"></i></span>
+                                                {% else %}
+                                                <span><i class="fa fa-star"></i></span>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <div class="pro-review">
+                                                <span>{{ product.review_count }} review(s)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- product single grid item end -->
+                            <!-- product single list item start -->
+                            <div class="product-list-item mb-30">
+                                <div class="product-thumb">
+                                    <a href="{{ product.get_absolute_url }}">
+                                        {% with product.images.all|first as first_image %}
+                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% endwith %}
+                                    </a>
+                                    {% if product.is_featured or product.is_hot_deal %}
+                                    <div class="product-label">
+                                        <span>hot</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="product-list-content">
+                                    <h3><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
+                                    <div class="ratings">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= product.average_rating %}
+                                            <span class="good"><i class="fa fa-star"></i></span>
+                                            {% else %}
+                                            <span><i class="fa fa-star"></i></span>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <div class="pro-review">
+                                            <span>{{ product.review_count }} review(s)</span>
+                                        </div>
+                                    </div>
+                                    <div class="pricebox">
+                                        {% if product.is_on_sale %}
+                                        <span class="regular-price">ksh{{ product.price }}</span>
+                                        <span class="old-price"><del>ksh{{ product.compare_price }}</del></span>
+                                        {% else %}
+                                        <span class="regular-price">ksh{{ product.price }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <p>{{ product.short_description }}</p>
+                                    <div class="product-list-action-link">
+                                        <a class="buy-btn" href="#" data-toggle="tooltip" data-placement="top" title="Add to cart">
+                                            go to buy <i class="fa fa-shopping-cart"></i> 
+                                        </a>
+                                        <a href="#" data-toggle="modal" data-target="#quick_view"> 
+                                            <span data-toggle="tooltip" data-placement="top" title="Quick view">
+                                                <i class="fa fa-search"></i>
+                                            </span> 
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Wishlist">
+                                            <i class="fa fa-heart-o"></i>
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Compare">
+                                            <i class="fa fa-refresh"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- product single list item start -->
+                        </div> <!-- product single column end -->
+                        {% endfor %}
+                    </div>
+                    <!-- product item end -->
+                </div>
+                <!-- product view wrapper area end -->
+
+                <!-- start pagination area -->
+                <div class="paginatoin-area text-center pt-28">
+                    <div class="row">
+                        <div class="col-12">
+                            <ul class="pagination-box">
+                                {% if page_obj.has_previous %}
+                                <li>
+                                    <a class="Previous" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="active"><a href="#">{{ num }}</a></li>
+                                    {% else %}
+                                    <li><a href="?page={{ num }}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li>
+                                    <a class="Next" href="?page={{ page_obj.next_page_number }}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- end pagination area -->
+            </div>
+            <!-- product main wrap end -->
+        </div>
+    </div>
+</div>
+<!-- page wrapper end -->
+{% endblock %}

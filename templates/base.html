@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+    {% load static %}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="meta description">
+
+    <!-- Site title -->
+    <title>{% block title %}Galio - Mega Shop Responsive Bootstrap 4 Template{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{% static 'assets/img/favicon.ico' %}" type="image/x-icon" />
+
+    <!-- CSS Files -->
+    <link href="{% static 'assets/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/helper.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/plugins.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/skin-default.css' %}" rel="stylesheet" id="galio-skin">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    
+
+    <div class="wrapper">
+        <!-- header area start -->
+        <header>
+            {% include 'partials/header.html' %}
+        </header>
+        <!-- header area end -->
+
+        {% block content %}
+        <!-- Main content will go here -->
+        {% endblock %}
+
+        <!-- footer area start -->
+        <footer>
+            {% include 'partials/footer.html' %}
+        </footer>
+        <!-- footer area end -->
+    </div>
+
+    <!-- Quick view modal start -->
+    <div class="modal" id="quick_view">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- product details inner will be loaded via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Quick view modal end -->
+
+    <!-- Scroll to top start -->
+    <div class="scroll-top not-visible">
+        <i class="fa fa-angle-up"></i>
+    </div>
+    <!-- Scroll to Top End -->
+
+    <!--All jQuery, Third Party Plugins & Activation (main.js) Files-->
+    <script src="{% static 'assets/js/vendor/modernizr-3.6.0.min.js' %}"></script>
+    <script src="{% static 'assets/js/vendor/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'assets/js/vendor/popper.min.js' %}"></script>
+    <script src="{% static 'assets/js/vendor/bootstrap.min.js' %}"></script>
+    <script src="{% static 'assets/js/plugins.js' %}"></script>
+    <script src="{% static 'assets/js/ajax-mail.js' %}"></script>
+    <script src="{% static 'assets/js/main.js' %}"></script>
+    <script src="{% static 'assets/js/switcher.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
