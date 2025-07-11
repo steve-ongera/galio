@@ -404,3 +404,99 @@ def register_view_enhanced(request):
             })
     
     return render(request, 'auth/register.html')
+
+from django.shortcuts import render, get_object_or_404
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from .models import Category, Brand, Product
+
+
+def category_products(request, slug):
+    """View to display products in a specific category"""
+    category = get_object_or_404(Category, slug=slug, is_active=True)
+    
+    # Get products in this category and its subcategories
+    products = Product.objects.filter(
+        Q(category=category) | Q(category__parent=category),
+        status='active'
+    ).select_related('category', 'brand').prefetch_related('images')
+    
+    # Handle sorting
+    sort_by = request.GET.get('sort', '-created_at')
+    valid_sorts = ['name', '-name', 'price', '-price', '-created_at', 'created_at', '-view_count']
+    if sort_by in valid_sorts:
+        products = products.order_by(sort_by)
+    
+    # Get all subcategories
+    subcategories = Category.objects.filter(parent=category, is_active=True)
+    
+    # Get product counts for sidebar
+    featured_count = products.filter(is_featured=True).count()
+    hot_deal_count = products.filter(is_hot_deal=True).count()
+    best_seller_count = products.filter(is_best_seller=True).count()
+    sale_count = products.filter(compare_price__gt=0).count()
+    
+    # Pagination
+    paginator = Paginator(products, 12)  # Show 12 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'category': category,
+        'products': page_obj,
+        'subcategories': subcategories,
+        'page_obj': page_obj,
+        'total_products': products.count(),
+        'featured_count': featured_count,
+        'hot_deal_count': hot_deal_count,
+        'best_seller_count': best_seller_count,
+        'sale_count': sale_count,
+        'current_sort': sort_by,
+    }
+    
+    return render(request, 'category/category_products.html', context)
+
+def brand_products(request, slug):
+    """View to display products from a specific brand"""
+    brand = get_object_or_404(Brand, slug=slug, is_active=True)
+    
+    products = Product.objects.filter(
+        brand=brand,
+        status='active'
+    ).select_related('category', 'brand').prefetch_related('images')
+    
+    # Pagination
+    paginator = Paginator(products, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'brand': brand,
+        'products': page_obj,
+        'page_obj': page_obj,
+        'total_products': products.count(),
+    }
+    
+    return render(request, 'brands/brand_products.html', context)
+
+
+def all_categories(request):
+    """View to display all categories"""
+    categories = Category.objects.filter(is_active=True).select_related('parent')
+    
+    context = {
+        'categories': categories,
+    }
+    
+    return render(request, 'category/all_categories.html', context)
+
+
+def all_brands(request):
+    """View to display all brands"""
+    brands = Brand.objects.filter(is_active=True)
+    
+    context = {
+        'brands': brands,
+    }
+    
+    return render(request, 'brands/all_brands.html', context)

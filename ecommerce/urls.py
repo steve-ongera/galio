@@ -7,4 +7,12 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    # Category URLs
+    path('category/<slug:slug>/', views.category_products, name='category_products'),
+    path('categories/', views.all_categories, name='all_categories'),
+    
+    # Brand URLs
+    path('brand/<slug:slug>/', views.brand_products, name='brand_products'),
+    path('brands/', views.all_brands, name='all_brands'),
+
 ]
