@@ -103,7 +103,7 @@
                                     <div class="header-mini-cart">
                                         <div class="mini-cart-btn">
                                             <i class="fa fa-shopping-cart"></i>
-                                            <span class="cart-notification">2</span>
+                                            <span class="cart-notification">{{ cart_items_count }}</span>
                                         </div>
                                         <div class="cart-total-price">
                                             <span>total</span>
@@ -141,7 +141,7 @@
                                                 <span class="subtotal-price">$88.66</span>
                                             </li>
                                             <li class="checkout-btn">
-                                                <a href="#">checkout</a>
+                                                <a href="{% url 'cart' %}">checkout</a>
                                             </li>
                                         </ul>
                                     </div>

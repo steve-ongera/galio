@@ -500,3 +500,62 @@ def all_brands(request):
     }
     
     return render(request, 'brands/all_brands.html', context)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Cart, CartItem, Product
+from django.contrib.auth.decorators import login_required
+
+def cart_view(request):
+    # The cart context processor will handle most of the data
+    return render(request, 'cart/cart.html')
+
+@login_required
+def add_to_cart(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    variant_id = request.POST.get('variant_id')  # If you have variants
+    
+    if request.user.is_authenticated:
+        cart, created = Cart.objects.get_or_create(user=request.user)
+    else:
+        session_key = request.session.session_key
+        cart, created = Cart.objects.get_or_create(session_key=session_key)
+    
+    # Check if item already in cart
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        product=product,
+        variant_id=variant_id if variant_id else None,
+        defaults={'quantity': 1}
+    )
+    
+    if not created:
+        cart_item.quantity += 1
+        cart_item.save()
+    
+    return redirect('cart')
+
+def remove_from_cart(request, item_id):
+    cart_item = get_object_or_404(CartItem, id=item_id)
+    cart_item.delete()
+    return redirect('cart')
+
+def update_cart_item(request, item_id):
+    cart_item = get_object_or_404(CartItem, id=item_id)
+    quantity = int(request.POST.get('quantity', 1))
+    
+    if quantity > 0:
+        cart_item.quantity = quantity
+        cart_item.save()
+    else:
+        cart_item.delete()
+    
+    return redirect('cart')
+
+def apply_coupon(request):
+    if request.method == 'POST':
+        coupon_code = request.POST.get('coupon_code')
+        # Add your coupon validation logic here
+        # You might want to store the coupon in the session
+        return redirect('cart')
+    return redirect('cart')
