@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Sign In</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- Display messages -->
+{% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- login wrapper start -->
+<div class="login-register-wrapper">
+    <div class="container">
+        <div class="member-area-from-wrap">
+            <div class="row justify-content-center">
+                <!-- Login Content Start -->
+                <div class="col-lg-6 col-md-8">
+                    <div class="login-reg-form-wrap">
+                        <h2 class="text-center mb-4">Sign In</h2>
+                        <form action="{% url 'login' %}" method="post">
+                            {% csrf_token %}
+                            
+                            <div class="single-input-item">
+                                <input type="email" 
+                                       name="email" 
+                                       placeholder="Enter your Email" 
+                                       required 
+                                       value="{{ request.POST.email|default:'' }}" />
+                            </div>
+                            
+                            <div class="single-input-item">
+                                <input type="password" 
+                                       name="password" 
+                                       placeholder="Enter your Password" 
+                                       required />
+                            </div>
+                            
+                            <div class="single-input-item">
+                                <div class="login-reg-form-meta d-flex align-items-center justify-content-between">
+                                    <div class="remember-meta">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" 
+                                                   class="custom-control-input" 
+                                                   id="rememberMe" 
+                                                   name="rememberMe">
+                                            <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                                        </div>
+                                    </div>
+                                    <a href="#" class="forget-pwd">Forget Password?</a>
+                                </div>
+                            </div>
+                            
+                            <div class="single-input-item">
+                                <button type="submit" class="sqr-btn btn-block">Sign In</button>
+                            </div>
+                            
+                            <div class="single-input-item text-center mt-3">
+                                <p>Don't have an account? <a href="{% url 'register' %}" class="text-primary">Sign Up</a></p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Login Content End -->
+            </div>
+        </div>
+    </div>
+</div>
+<!-- login wrapper end -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus on email field when page loads
+    const emailField = document.querySelector('input[name="email"]');
+    if (emailField) {
+        emailField.focus();
+    }
+    
+    // Add form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const email = form.querySelector('input[name="email"]').value.trim();
+            const password = form.querySelector('input[name="password"]').value;
+            
+            if (!email || !password) {
+                e.preventDefault();
+                alert('Please fill in all required fields.');
+                return false;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                e.preventDefault();
+                alert('Please enter a valid email address.');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
