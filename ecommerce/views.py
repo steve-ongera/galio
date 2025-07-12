@@ -506,9 +506,85 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Cart, CartItem, Product
 from django.contrib.auth.decorators import login_required
 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import Cart, CartItem, Coupon
+from decimal import Decimal
+
 def cart_view(request):
-    # The cart context processor will handle most of the data
-    return render(request, 'cart/cart.html')
+    # Get cart from context processor (basic info already available)
+    context = {}
+    
+    # Handle coupon application if submitted
+    if request.method == 'POST' and 'coupon_code' in request.POST:
+        coupon_code = request.POST.get('coupon_code').strip()
+        try:
+            coupon = Coupon.objects.get(
+                code__iexact=coupon_code,
+                is_active=True,
+                valid_from__lte=timezone.now(),
+                valid_to__gte=timezone.now()
+            )
+            
+            # Check if coupon has usage limit
+            if coupon.usage_limit and coupon.used_count >= coupon.usage_limit:
+                messages.error(request, "This coupon has reached its usage limit.")
+            else:
+                # Store coupon in session
+                request.session['applied_coupon'] = {
+                    'code': coupon.code,
+                    'discount_type': coupon.discount_type,
+                    'discount_value': float(coupon.discount_value),
+                    'minimum_amount': float(coupon.minimum_amount) if coupon.minimum_amount else None,
+                    'maximum_discount': float(coupon.maximum_discount) if coupon.maximum_discount else None,
+                }
+                messages.success(request, f"Coupon '{coupon.code}' applied successfully!")
+                
+        except Coupon.DoesNotExist:
+            messages.error(request, "Invalid coupon code.")
+        
+        return redirect('cart')
+    
+    # Calculate totals with potential coupon discount
+    cart_items = context.get('cart_items', [])
+    cart_subtotal = sum(item.total_price for item in cart_items)
+    shipping_cost = Decimal('0.00')  # Add your shipping calculation logic here
+    
+    # Check for applied coupon
+    coupon_discount = Decimal('0.00')
+    coupon_code = None
+    applied_coupon = request.session.get('applied_coupon')
+    
+    if applied_coupon:
+        coupon_code = applied_coupon['code']
+        if applied_coupon['discount_type'] == 'percentage':
+            # Calculate percentage discount
+            discount = (cart_subtotal * Decimal(applied_coupon['discount_value'])) / Decimal('100')
+            if applied_coupon['maximum_discount']:
+                discount = min(discount, Decimal(str(applied_coupon['maximum_discount'])))
+            coupon_discount = discount
+        else:
+            # Fixed amount discount
+            coupon_discount = Decimal(str(applied_coupon['discount_value']))
+        
+        # Check minimum amount requirement
+        if applied_coupon['minimum_amount'] and cart_subtotal < Decimal(str(applied_coupon['minimum_amount'])):
+            messages.warning(request, f"Coupon requires minimum purchase of ${applied_coupon['minimum_amount']}")
+            del request.session['applied_coupon']
+            coupon_discount = Decimal('0.00')
+            coupon_code = None
+    
+    cart_total = cart_subtotal + shipping_cost - coupon_discount
+    
+    # Add additional context
+    context.update({
+        'shipping_cost': shipping_cost,
+        'coupon_discount': coupon_discount,
+        'coupon_code': coupon_code,
+        'cart_total': cart_total,
+    })
+    
+    return render(request, 'cart/cart.html', context)
 
 @login_required
 def add_to_cart(request, product_id):

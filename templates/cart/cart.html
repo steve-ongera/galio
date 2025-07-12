@@ -1,0 +1,152 @@
+ {% extends "base.html" %}
+
+ {% block content %}
+
+ <!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#">Home</a></li>
+                            <li class="breadcrumb-item"><a href="#">Shop</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Cart</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- cart main wrapper start -->
+<div class="cart-main-wrapper">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <!-- Cart Table Area -->
+                <div class="cart-table table-responsive">
+                    {% if cart_items %}
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="pro-thumbnail">Thumbnail</th>
+                                <th class="pro-title">Product</th>
+                                <th class="pro-price">Price</th>
+                                <th class="pro-quantity">Quantity</th>
+                                <th class="pro-subtotal">Total</th>
+                                <th class="pro-remove">Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                <td class="pro-thumbnail">
+                                    <a href="{{ item.product.get_absolute_url }}">
+                                        {% with item.product.images.first as product_image %}
+                                        {% if product_image %}
+                                        <img class="img-fluid" src="{{ product_image.image.url }}" alt="{{ product_image.alt_text|default:item.product.name }}"/>
+                                        {% else %}
+                                        <img class="img-fluid" src="{{ MEDIA_URL }}products/default.jpg" alt="{{ item.product.name }}"/>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </a>
+                                </td>
+                                <td class="pro-title">
+                                    <a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a>
+                                    {% if item.variant %}
+                                    <br><small>Variant: {{ item.variant.get_attributes_display }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="pro-price"><span>${{ item.unit_price }}</span></td>
+                                <td class="pro-quantity">
+                                    <div class="pro-qty">
+                                        <form action="{% url 'update_cart_item' item.id %}" method="post" class="d-flex">
+                                            {% csrf_token %}
+                                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="99">
+                                            <button type="submit" class="btn btn-sm btn-link">Update</button>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td class="pro-subtotal"><span>${{ item.total_price }}</span></td>
+                                <td class="pro-remove">
+                                    <a href="{% url 'remove_from_cart' item.id %}"><i class="fa fa-trash-o"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Your cart is empty. <a href="#">Continue shopping</a>
+                    </div>
+                    {% endif %}
+                </div>
+    
+                {% if cart_items %}
+                <!-- Cart Update Option -->
+                <div class="cart-update-option d-block d-md-flex justify-content-between">
+                    <div class="apply-coupon-wrapper">
+                        <form action="{% url 'apply_coupon' %}" method="post" class="d-block d-md-flex">
+                            {% csrf_token %}
+                            <input type="text" name="coupon_code" placeholder="Enter Your Coupon Code" required />
+                            <button type="submit" class="sqr-btn">Apply Coupon</button>
+                        </form>
+                    </div>
+                    <div class="cart-update mt-sm-16">
+                        <a href="{% url 'shop' %}" class="sqr-btn">Continue Shopping</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if cart_items %}
+        <div class="row">
+            <div class="col-lg-5 ml-auto">
+                <!-- Cart Calculation Area -->
+                <div class="cart-calculator-wrapper">
+                    <div class="cart-calculate-items">
+                        <h3>Cart Totals</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tr>
+                                    <td>Sub Total</td>
+                                    <td>${{ cart_subtotal }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Shipping</td>
+                                    <td>
+                                        {% if shipping_cost == 0 %}
+                                        Free Shipping
+                                        {% else %}
+                                        ${{ shipping_cost }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if coupon_discount > 0 %}
+                                <tr>
+                                    <td>Discount ({{ coupon_code }})</td>
+                                    <td>-${{ coupon_discount }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="total">
+                                    <td>Total</td>
+                                    <td class="total-amount">${{ cart_total }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <a href="{% url 'checkout' %}" class="sqr-btn d-block">Proceed To Checkout</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<!-- cart main wrapper end -->
+
+{% endblock %}
