@@ -158,49 +158,126 @@
                             <div class="main-header-inner">
                                 
                                
-
+                                <!-- Updated HTML with JavaScript -->
+                                <div class="category-toggle-wrap">
                                     <div class="category-toggle-wrap">
-                                        <div class="category-toggle-wrap">
-                                            <div class="category-toggle">
-                                                All Categories
-                                                <div class="cat-icon">
-                                                    <i class="fa fa-angle-down"></i>
-                                                </div>
+                                        <div class="category-toggle" id="categoryToggle">
+                                            All Categories
+                                            <div class="cat-icon">
+                                                <i class="fa fa-angle-down" id="toggleIcon"></i>
                                             </div>
-                                            <nav class="category-menu hm-1">
-                                                <ul>
-                                                    {% for parent_category in parent_categories %}
-                                                    <li {% if parent_category in categories_with_children %}class="menu-item-has-children"{% endif %}>
-                                                        <a href="{% url 'category_products' parent_category.slug %}">
-                                                            {{ parent_category.name }}
-                                                            <span class="product-count">({{ parent_category.products.count }})</span>
-                                                        </a>
-                                                        {% if parent_category in categories_with_children %}
-                                                        <ul class="category-mega-menu">
-                                                            {% for child in categories_with_children|get_item:parent_category %}
-                                                            <li class="menu-item-has-children">
-                                                                <a href="{% url 'category_products' child.slug %}">
-                                                                    {{ child.name }}
-                                                                    <span class="product-count">({{ child.products.count }})</span>
-                                                                </a>
-                                                                <ul>
-                                                                    {% comment %} 
-                                                                    If you need to add another level of subcategories here, 
-                                                                    you would add them similar to the sample structure
-                                                                    {% endcomment %}
-                                                                </ul>
-                                                            </li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                        {% endif %}
-                                                    </li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </nav>
                                         </div>
-
-                                        
+                                        <nav class="category-menu hm-1" id="categoryMenu" style="display: none;">
+                                            <ul>
+                                                {% for parent_category in parent_categories %}
+                                                <li {% if parent_category in categories_with_children %}class="menu-item-has-children"{% endif %}>
+                                                    <a href="{% url 'category_products' parent_category.slug %}">
+                                                        {{ parent_category.name }}
+                                                        <span class="product-count">({{ parent_category.products.count }})</span>
+                                                    </a>
+                                                    {% if parent_category in categories_with_children %}
+                                                    <ul class="category-mega-menu">
+                                                        {% for child in categories_with_children|get_item:parent_category %}
+                                                        <li class="menu-item-has-children">
+                                                            <a href="{% url 'category_products' child.slug %}">
+                                                                {{ child.name }}
+                                                                <span class="product-count">({{ child.products.count }})</span>
+                                                            </a>
+                                                            <ul>
+                                                                {% comment %} 
+                                                                If you need to add another level of subcategories here, 
+                                                                you would add them similar to the sample structure
+                                                                {% endcomment %}
+                                                            </ul>
+                                                        </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% endif %}
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </nav>
                                     </div>
+                                </div>
+
+                                <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const categoryToggle = document.getElementById('categoryToggle');
+                                    const categoryMenu = document.getElementById('categoryMenu');
+                                    const toggleIcon = document.getElementById('toggleIcon');
+                                    const STORAGE_KEY = 'categoryMenuState';
+                                    
+                                    // Function to get saved state from localStorage
+                                    function getSavedState() {
+                                        try {
+                                            return localStorage.getItem(STORAGE_KEY) === 'open';
+                                        } catch (e) {
+                                            // Fallback if localStorage is not available
+                                            return false;
+                                        }
+                                    }
+                                    
+                                    // Function to save state to localStorage
+                                    function saveState(isOpen) {
+                                        try {
+                                            localStorage.setItem(STORAGE_KEY, isOpen ? 'open' : 'closed');
+                                        } catch (e) {
+                                            // Silently fail if localStorage is not available
+                                        }
+                                    }
+                                    
+                                    // Function to update UI based on state
+                                    function updateUI(isOpen) {
+                                        if (isOpen) {
+                                            categoryMenu.style.display = 'block';
+                                            toggleIcon.classList.remove('fa-angle-down');
+                                            toggleIcon.classList.add('fa-angle-up');
+                                            categoryToggle.classList.add('active');
+                                        } else {
+                                            categoryMenu.style.display = 'none';
+                                            toggleIcon.classList.remove('fa-angle-up');
+                                            toggleIcon.classList.add('fa-angle-down');
+                                            categoryToggle.classList.remove('active');
+                                        }
+                                    }
+                                    
+                                    // Function to toggle the menu
+                                    function toggleMenu() {
+                                        const isCurrentlyOpen = categoryMenu.style.display === 'block';
+                                        const newState = !isCurrentlyOpen;
+                                        
+                                        updateUI(newState);
+                                        saveState(newState);
+                                    }
+                                    
+                                    // Initialize the menu state on page load
+                                    function initializeMenu() {
+                                        const savedState = getSavedState();
+                                        updateUI(savedState);
+                                    }
+                                    
+                                    // Add click event listener to toggle
+                                    categoryToggle.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleMenu();
+                                    });
+                                    
+                                    // Optional: Close menu when clicking outside
+                                    document.addEventListener('click', function(e) {
+                                        if (!categoryToggle.contains(e.target) && !categoryMenu.contains(e.target)) {
+                                            const isCurrentlyOpen = categoryMenu.style.display === 'block';
+                                            if (isCurrentlyOpen) {
+                                                updateUI(false);
+                                                saveState(false);
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Initialize menu state
+                                    initializeMenu();
+                                });
+                                </script>
                                 <div class="main-menu">
                                     <nav id="mobile-menu">
                                         <ul>

@@ -686,7 +686,7 @@ from .forms import CheckoutForm, BillingAddressForm, ShippingAddressForm
 
 
 class CheckoutView(View):
-    template_name = 'shop/checkout.html'
+    template_name = 'checkout.html'
     
     def get(self, request):
         # Get or create cart
@@ -1157,4 +1157,4 @@ def order_confirmation(request, order_number):
         'order_items': order.items.all()
     }
     
-    return render(request, 'shop/order_confirmation.html', context)
+    return render(request, 'order_confirmation.html', context)

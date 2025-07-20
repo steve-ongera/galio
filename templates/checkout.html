@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    <!-- breadcrumb area start -->
+    <div class="breadcrumb-area">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="breadcrumb-wrap">
+                        <nav aria-label="breadcrumb">
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Checkout</li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- breadcrumb area end -->
+
+    <!-- checkout main wrapper start -->
+    <div class="checkout-page-wrapper">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <!-- Display Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Checkout Login Coupon Accordion Start -->
+                    <div class="checkoutaccordion" id="checkOutAccordion">
+                        {% if not user.is_authenticated %}
+                        <div class="card">
+                            <h3>Returning Customer? <span data-toggle="collapse" data-target="#logInaccordion">Click Here To Login</span></h3>
+                            <div id="logInaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                <div class="card-body">
+                                    <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new customer, please proceed to the Billing &amp; Shipping section.</p>
+                                    <div class="login-reg-form-wrap mt-20">
+                                        <div class="row">
+                                            <div class="col-lg-7 m-auto">
+                                                <form action="{% url 'login' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <div class="single-input-item">
+                                                                <input type="email" name="username" placeholder="Enter your Email" required />
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <div class="single-input-item">
+                                                                <input type="password" name="password" placeholder="Enter your Password" required />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="single-input-item">
+                                                        <div class="login-reg-form-meta d-flex align-items-center justify-content-between">
+                                                            <div class="remember-meta">
+                                                                <div class="custom-control custom-checkbox">
+                                                                    <input type="checkbox" class="custom-control-input" id="rememberMe" name="remember" />
+                                                                    <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                                                                </div>
+                                                            </div>
+                                                            <a href="#" class="forget-pwd">Forget Password?</a>
+                                                        </div>
+                                                    </div>
+                                                    <div class="single-input-item">
+                                                        <button type="submit" class="check-btn sqr-btn">Login</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="card">
+                            <h3>Have A Coupon? <span data-toggle="collapse" data-target="#couponaccordion">Click Here To Enter Your Code</span></h3>
+                            <div id="couponaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                <div class="card-body">
+                                    <div class="cart-update-option">
+                                        <div class="apply-coupon-wrapper">
+                                            <form action="{% url 'apply_coupon' %}" method="post" class="d-block d-md-flex">
+                                                {% csrf_token %}
+                                                <input type="text" name="coupon_code" placeholder="Enter Your Coupon Code" required />
+                                                <button type="submit" class="check-btn sqr-btn">Apply Coupon</button>
+                                            </form>
+                                            {% if request.session.coupon_code %}
+                                                <div class="mt-2">
+                                                    <span class="badge badge-success">Coupon "{{ request.session.coupon_code }}" applied</span>
+                                                    <a href="{% url 'remove_coupon' %}" class="btn btn-sm btn-outline-danger ml-2">Remove</a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Checkout Login Coupon Accordion End -->
+                </div>
+            </div>
+
+            <form method="post" id="checkout-form">
+                {% csrf_token %}
+                <div class="row">
+                    <!-- Checkout Billing Details -->
+                    <div class="col-lg-6">
+                        <div class="checkout-billing-details-wrap">
+                            <h2>Billing Details</h2>
+                            <div class="billing-form-wrap">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="single-input-item">
+                                            <label for="{{ billing_form.first_name.id_for_label }}" class="required">First Name</label>
+                                            {{ billing_form.first_name }}
+                                            {% if billing_form.first_name.errors %}
+                                                <div class="text-danger">{{ billing_form.first_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="single-input-item">
+                                            <label for="{{ billing_form.last_name.id_for_label }}" class="required">Last Name</label>
+                                            {{ billing_form.last_name }}
+                                            {% if billing_form.last_name.errors %}
+                                                <div class="text-danger">{{ billing_form.last_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.email.id_for_label }}" class="required">Email Address</label>
+                                    {{ billing_form.email }}
+                                    {% if billing_form.email.errors %}
+                                        <div class="text-danger">{{ billing_form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.company.id_for_label }}">Company Name</label>
+                                    {{ billing_form.company }}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.country.id_for_label }}" class="required">Country</label>
+                                    {{ billing_form.country }}
+                                    {% if billing_form.country.errors %}
+                                        <div class="text-danger">{{ billing_form.country.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.address_line_1.id_for_label }}" class="required pt-20">Street address</label>
+                                    {{ billing_form.address_line_1 }}
+                                    {% if billing_form.address_line_1.errors %}
+                                        <div class="text-danger">{{ billing_form.address_line_1.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    {{ billing_form.address_line_2 }}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.city.id_for_label }}" class="required">Town / City</label>
+                                    {{ billing_form.city }}
+                                    {% if billing_form.city.errors %}
+                                        <div class="text-danger">{{ billing_form.city.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.state.id_for_label }}">State / Division</label>
+                                    {{ billing_form.state }}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.postal_code.id_for_label }}" class="required">Postcode / ZIP</label>
+                                    {{ billing_form.postal_code }}
+                                    {% if billing_form.postal_code.errors %}
+                                        <div class="text-danger">{{ billing_form.postal_code.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="{{ billing_form.phone.id_for_label }}">Phone</label>
+                                    {{ billing_form.phone }}
+                                    {% if billing_form.phone.errors %}
+                                        <div class="text-danger">{{ billing_form.phone.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                {% if not user.is_authenticated %}
+                                <div class="checkout-box-wrap">
+                                    <div class="single-input-item">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="create_pwd" name="create_pwd">
+                                            <label class="custom-control-label" for="create_pwd">Create an account?</label>
+                                        </div>
+                                    </div>
+                                    <div class="account-create single-form-row" id="password-field" style="display: none;">
+                                        <p>Create an account by entering the information below. If you are a returning customer please login at the top of the page.</p>
+                                        <div class="single-input-item">
+                                            <label for="pwd" class="required">Account Password</label>
+                                            <input type="password" id="pwd" name="pwd" placeholder="Account Password" />
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="checkout-box-wrap">
+                                    <div class="single-input-item">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="ship_to_different" name="ship_to_different">
+                                            <label class="custom-control-label" for="ship_to_different">Ship to a different address?</label>
+                                        </div>
+                                    </div>
+                                    <div class="ship-to-different single-form-row" id="shipping-fields" style="display: none;">
+                                        <!-- Shipping form fields would go here - similar structure to billing -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="single-input-item">
+                                                    <label for="{{ shipping_form.first_name.id_for_label }}" class="required">First Name</label>
+                                                    {{ shipping_form.first_name }}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="single-input-item">
+                                                    <label for="{{ shipping_form.last_name.id_for_label }}" class="required">Last Name</label>
+                                                    {{ shipping_form.last_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Add other shipping fields as needed -->
+                                    </div>
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="ordernote">Order Note</label>
+                                    <textarea name="ordernote" id="ordernote" cols="30" rows="3" placeholder="Notes about your order, e.g. special notes for delivery."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Summary Details -->
+                    <div class="col-lg-6">
+                        <div class="order-summary-details mt-md-26 mt-sm-26">
+                            <h2>Your Order Summary</h2>
+                            <div class="order-summary-content mb-sm-4">
+                                <!-- Order Summary Table -->
+                                <div class="order-summary-table table-responsive text-center">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Products</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in cart_items %}
+                                            <tr>
+                                                <td>
+                                                    <a href="#">
+                                                        {{ item.product.name }}
+                                                        {% if item.variant %}
+                                                            ({{ item.variant.name }})
+                                                        {% endif %}
+                                                        <strong> × {{ item.quantity }}</strong>
+                                                    </a>
+                                                </td>
+                                                <td>${{ item.total_price|floatformat:2 }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td>Sub Total</td>
+                                                <td><strong>${{ subtotal|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Shipping</td>
+                                                <td><strong>${{ shipping_cost|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Tax (16%)</td>
+                                                <td><strong>${{ tax_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            {% if request.session.coupon_code %}
+                                            <tr>
+                                                <td>Discount</td>
+                                                <td><strong>-${{ discount_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            {% endif %}
+                                            <tr>
+                                                <td>Total Amount</td>
+                                                <td><strong>${{ total_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <!-- Order Payment Method -->
+                                <div class="order-payment-method">
+                                    <div class="single-payment-method show">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="cashon" name="paymentmethod" value="cash" class="custom-control-input" />
+                                                <label class="custom-control-label" for="cashon">Cash On Delivery</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="cash">
+                                            <p>Pay with cash upon delivery.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="single-payment-method">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="mpesa" name="paymentmethod" value="mpesa" class="custom-control-input" checked />
+                                                <label class="custom-control-label" for="mpesa">M-Pesa Payment</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="mpesa">
+                                            <p>Pay using M-Pesa. You will receive an STK push notification on your phone.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="single-payment-method">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="directbank" name="paymentmethod" value="bank" class="custom-control-input" />
+                                                <label class="custom-control-label" for="directbank">Direct Bank Transfer</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="bank">
+                                            <p>Make your payment directly into our bank account. Please use your Order ID as the payment reference.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="summary-footer-area">
+                                        <div class="custom-control custom-checkbox mb-14">
+                                            <input type="checkbox" class="custom-control-input" id="terms" required />
+                                            <label class="custom-control-label" for="terms">I have read and agree to the website <a href="#">terms and conditions.</a></label>
+                                        </div>
+                                        <button type="submit" class="check-btn sqr-btn" id="place-order-btn">Place Order</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- checkout main wrapper end -->
+
+    <!-- M-Pesa Payment Modal -->
+    <div class="modal fade" id="mpesaModal" tabindex="-1" role="dialog" aria-labelledby="mpesaModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mpesaModalLabel">M-Pesa Payment</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="mpesa-loading" style="display: none;">
+                        <div class="spinner-border" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <p class="mt-2">Processing payment...</p>
+                    </div>
+                    <div id="mpesa-message">
+                        <p>Please check your phone and enter your M-Pesa PIN to complete the payment.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            // Toggle password field
+            $('#create_pwd').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#password-field').slideDown();
+                } else {
+                    $('#password-field').slideUp();
+                }
+            });
+
+            // Toggle shipping fields
+            $('#ship_to_different').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#shipping-fields').slideDown();
+                } else {
+                    $('#shipping-fields').slideUp();
+                }
+            });
+
+            // Handle form submission for M-Pesa
+            $('#checkout-form').submit(function(e) {
+                var paymentMethod = $('input[name="paymentmethod"]:checked').val();
+                
+                if (paymentMethod === 'mpesa') {
+                    e.preventDefault();
+                    $('#mpesa-loading').show();
+                    $('#mpesaModal').modal('show');
+                    
+                    $.ajax({
+                        url: $(this).attr('action') || window.location.pathname,
+                        type: 'POST',
+                        data: $(this).serialize(),
+                        success: function(response) {
+                            $('#mpesa-loading').hide();
+                            if (response.success) {
+                                $('#mpesa-message').html('<p class="text-success">' + response.message + '</p>');
+                                // Optionally poll for payment status
+                                checkPaymentStatus(response.checkout_request_id);
+                            } else {
+                                $('#mpesa-message').html('<p class="text-danger">Payment failed. Please try again.</p>');
+                            }
+                        },
+                        error: function() {
+                            $('#mpesa-loading').hide();
+                            $('#mpesa-message').html('<p class="text-danger">An error occurred. Please try again.</p>');
+                        }
+                    });
+                }
+            });
+
+            function checkPaymentStatus(checkoutRequestId) {
+                // Poll payment status every 5 seconds
+                var pollInterval = setInterval(function() {
+                    $.get('{% url "check_payment_status" %}', {
+                        checkout_request_id: checkoutRequestId
+                    }, function(response) {
+                        if (response.status === 'completed') {
+                            clearInterval(pollInterval);
+                            window.location.href = '{% url "order_confirmation" order_number="ORDER_NUMBER" %}'.replace('ORDER_NUMBER', response.order_number);
+                        } else if (response.status === 'failed') {
+                            clearInterval(pollInterval);
+                            $('#mpesa-message').html('<p class="text-danger">Payment failed. Please try again.</p>');
+                        }
+                    });
+                }, 5000);
+
+                // Stop polling after 2 minutes
+                setTimeout(function() {
+                    clearInterval(pollInterval);
+                }, 120000);
+            }
+        });
+    </script>
+{% endblock %}

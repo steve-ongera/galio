@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    <style>
+        .order-confirmation {
+            padding: 60px 0;
+        }
+        .success-icon {
+            font-size: 72px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .order-details {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .order-summary-table {
+            margin-top: 20px;
+        }
+        .total-row {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        .action-buttons {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .btn-custom {
+            margin: 0 10px;
+            min-width: 150px;
+        }
+        .contact-info {
+            background: #fff;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin-top: 30px;
+        }
+    </style>
+
+    <!-- breadcrumb area start -->
+    <div class="breadcrumb-area">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="breadcrumb-wrap">
+                        <nav aria-label="breadcrumb">
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'checkout' %}">Checkout</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Order Confirmation</li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- breadcrumb area end -->
+
+    <!-- order confirmation area start -->
+    <div class="order-confirmation">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="text-center">
+                        <div class="success-icon">
+                            ✓
+                        </div>
+                        <h1 class="mb-3">Thank You for Your Order!</h1>
+                        <p class="lead">Your order has been successfully placed and is being processed.</p>
+                        <p>Order Number: <strong>{{ order.order_number }}</strong></p>
+                        <p>Order Date: <strong>{{ order.created_at|date:"F d, Y" }}</strong></p>
+                        {% if order.estimated_delivery %}
+                        <p>Estimated Delivery: <strong>{{ order.estimated_delivery|date:"F d, Y" }}</strong></p>
+                        {% endif %}
+                    </div>
+
+                    <div class="order-details">
+                        <h3>Order Details</h3>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h5>Billing Address</h5>
+                                <address>
+                                    {{ order.billing_address|linebreaks }}
+                                </address>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Shipping Address</h5>
+                                <address>
+                                    {{ order.shipping_address|linebreaks }}
+                                </address>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h5>Payment Method</h5>
+                                <p>
+                                    {% if order.payment_method == 'mpesa' %}
+                                        M-Pesa
+                                    {% elif order.payment_method == 'cash' %}
+                                        Cash on Delivery
+                                    {% elif order.payment_method == 'bank' %}
+                                        Bank Transfer
+                                    {% elif order.payment_method == 'card' %}
+                                        Credit/Debit Card
+                                    {% else %}
+                                        {{ order.payment_method|capfirst }}
+                                    {% endif %}
+                                </p>
+                                {% if order.payment_status %}
+                                <p><strong>Payment Status:</strong> 
+                                    <span class="badge 
+                                        {% if order.payment_status == 'paid' %}badge-success
+                                        {% elif order.payment_status == 'pending' %}badge-warning
+                                        {% else %}badge-danger{% endif %}">
+                                        {{ order.payment_status|capfirst }}
+                                    </span>
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Order Status</h5>
+                                <span class="badge 
+                                    {% if order.status == 'confirmed' %}badge-success
+                                    {% elif order.status == 'processing' %}badge-info
+                                    {% elif order.status == 'shipped' %}badge-primary
+                                    {% elif order.status == 'delivered' %}badge-success
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ order.status|capfirst }}
+                                </span>
+                                {% if order.tracking_number %}
+                                <p class="mt-2"><strong>Tracking Number:</strong> {{ order.tracking_number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="order-summary-table table-responsive mt-4">
+                            <h5>Order Items</h5>
+                            <table class="table table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order_items %}
+                                    <tr>
+                                        <td>
+                                            {{ item.product.name }}
+                                            {% if item.variant %}
+                                                <br><small class="text-muted">{{ item.variant.name }}</small>
+                                            {% endif %}
+                                            {% if item.product.sku %}
+                                                <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>${{ item.unit_price|floatformat:2 }}</td>
+                                        <td>${{ item.total_price|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="3">Subtotal</th>
+                                        <th>${{ order.subtotal|floatformat:2 }}</th>
+                                    </tr>
+                                    {% if order.discount_amount and order.discount_amount > 0 %}
+                                    <tr>
+                                        <th colspan="3">
+                                            Discount
+                                            {% if order.coupon_code %}
+                                                ({{ order.coupon_code }})
+                                            {% endif %}
+                                        </th>
+                                        <th class="text-success">-${{ order.discount_amount|floatformat:2 }}</th>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <th colspan="3">Shipping</th>
+                                        <th>
+                                            {% if order.shipping_amount == 0 %}
+                                                Free
+                                            {% else %}
+                                                ${{ order.shipping_amount|floatformat:2 }}
+                                            {% endif %}
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3">Tax</th>
+                                        <th>${{ order.tax_amount|floatformat:2 }}</th>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <th colspan="3">Total Amount</th>
+                                        <th>${{ order.total_amount|floatformat:2 }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Additional Information -->
+                        {% if order.notes %}
+                        <div class="mt-4">
+                            <h5>Order Notes</h5>
+                            <p>{{ order.notes|linebreaks }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <a href="{% url 'order_details' order.id %}" class="btn btn-primary btn-custom">View Order Details</a>
+                        <a href="{% url 'home' %}" class="btn btn-outline-primary btn-custom">Continue Shopping</a>
+                        {% if order.status != 'delivered' and order.status != 'cancelled' %}
+                        <a href="{% url 'track_order' order.order_number %}" class="btn btn-info btn-custom">Track Order</a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="contact-info">
+                        <h5>Need Help?</h5>
+                        <p>If you have any questions about your order, please don't hesitate to contact us:</p>
+                        <ul class="list-unstyled">
+                            <li><strong>Email:</strong> <a href="mailto:support@yourstore.com">support@yourstore.com</a></li>
+                            <li><strong>Phone:</strong> <a href="tel:+1234567890">+1 (234) 567-890</a></li>
+                            <li><strong>Live Chat:</strong> Available 24/7 on our website</li>
+                        </ul>
+                        <p class="mb-0"><small class="text-muted">
+                            A confirmation email has been sent to {{ order.email }}. 
+                            Please keep this order number for your records: <strong>{{ order.order_number }}</strong>
+                        </small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- order confirmation area end -->
+
+{% endblock %}
