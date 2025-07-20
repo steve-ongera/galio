@@ -511,9 +511,31 @@ from django.contrib import messages
 from .models import Cart, CartItem, Coupon
 from decimal import Decimal
 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from decimal import Decimal
+from .models import Cart, CartItem, Coupon  # Adjust imports based on your models
+
 def cart_view(request):
-    # Get cart from context processor (basic info already available)
-    context = {}
+    # Get cart items properly - replace this with your actual cart logic
+    cart_items = []
+    if request.user.is_authenticated:
+        # For authenticated users
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart_items = CartItem.objects.filter(cart=cart)
+        except Cart.DoesNotExist:
+            cart_items = []
+    else:
+        # For anonymous users using session
+        cart_id = request.session.get('cart_id')
+        if cart_id:
+            try:
+                cart = Cart.objects.get(id=cart_id)
+                cart_items = CartItem.objects.filter(cart=cart)
+            except Cart.DoesNotExist:
+                cart_items = []
     
     # Handle coupon application if submitted
     if request.method == 'POST' and 'coupon_code' in request.POST:
@@ -546,8 +568,7 @@ def cart_view(request):
         return redirect('cart')
     
     # Calculate totals with potential coupon discount
-    cart_items = context.get('cart_items', [])
-    cart_subtotal = sum(item.total_price for item in cart_items)
+    cart_subtotal = sum(item.total_price for item in cart_items) if cart_items else Decimal('0.00')
     shipping_cost = Decimal('0.00')  # Add your shipping calculation logic here
     
     # Check for applied coupon
@@ -555,11 +576,11 @@ def cart_view(request):
     coupon_code = None
     applied_coupon = request.session.get('applied_coupon')
     
-    if applied_coupon:
+    if applied_coupon and cart_subtotal > 0:
         coupon_code = applied_coupon['code']
         if applied_coupon['discount_type'] == 'percentage':
             # Calculate percentage discount
-            discount = (cart_subtotal * Decimal(applied_coupon['discount_value'])) / Decimal('100')
+            discount = (cart_subtotal * Decimal(str(applied_coupon['discount_value']))) / Decimal('100')
             if applied_coupon['maximum_discount']:
                 discount = min(discount, Decimal(str(applied_coupon['maximum_discount'])))
             coupon_discount = discount
@@ -574,17 +595,21 @@ def cart_view(request):
             coupon_discount = Decimal('0.00')
             coupon_code = None
     
-    cart_total = cart_subtotal + shipping_cost - coupon_discount
+    # Ensure cart_total doesn't go negative
+    cart_total = max(cart_subtotal + shipping_cost - coupon_discount, Decimal('0.00'))
     
-    # Add additional context
-    context.update({
+    # Prepare context
+    context = {
+        'cart_items': cart_items,
+        'cart_subtotal': cart_subtotal,
         'shipping_cost': shipping_cost,
         'coupon_discount': coupon_discount,
         'coupon_code': coupon_code,
         'cart_total': cart_total,
-    })
+    }
     
     return render(request, 'cart/cart.html', context)
+
 
 @login_required
 def add_to_cart(request, product_id):
