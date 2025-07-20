@@ -103,46 +103,43 @@
                                     <div class="header-mini-cart">
                                         <div class="mini-cart-btn">
                                             <i class="fa fa-shopping-cart"></i>
-                                            <span class="cart-notification">{{ cart_items_count }}</span>
+                                            <span class="cart-notification">{{ cart_items_count|default:0 }}</span>
                                         </div>
                                         <div class="cart-total-price">
                                             <span>total</span>
-                                            $50.00
+                                            ${{ cart_total|default:0.00|floatformat:2 }}
                                         </div>
                                         <ul class="cart-list">
+                                            {% for item in cart_items %}
                                             <li>
                                                 <div class="cart-img">
-                                                    <a href="product-details.html"><img src="assets/img/cart/cart-1.jpg"
-                                                            alt=""></a>
+                                                    <a href="{% url 'product_detail' item.product.id %}">
+                                                        <img src="{{ item.product.image.url|default:'assets/img/cart/default-cart.jpg' }}" alt="{{ item.product.name }}">
+                                                    </a>
                                                 </div>
                                                 <div class="cart-info">
-                                                    <h4><a href="product-details.html">simple product 09</a></h4>
-                                                    <span>$60.00</span>
+                                                    <h4><a href="{% url 'product_detail' item.product.id %}">{{ item.product.name }}</a></h4>
+                                                    <span>${{ item.total_price|floatformat:2 }}</span>
                                                 </div>
                                                 <div class="del-icon">
                                                     <i class="fa fa-times"></i>
                                                 </div>
                                             </li>
+                                            {% empty %}
                                             <li>
-                                                <div class="cart-img">
-                                                    <a href="product-details.html"><img src="assets/img/cart/cart-2.jpg"
-                                                            alt=""></a>
-                                                </div>
-                                                <div class="cart-info">
-                                                    <h4><a href="product-details.html">virtual product 10</a></h4>
-                                                    <span>$50.00</span>
-                                                </div>
-                                                <div class="del-icon">
-                                                    <i class="fa fa-times"></i>
-                                                </div>
+                                                <p>Your cart is empty</p>
                                             </li>
+                                            {% endfor %}
+                                            
+                                            {% if cart_items %}
                                             <li class="mini-cart-price">
                                                 <span class="subtotal">subtotal : </span>
-                                                <span class="subtotal-price">$88.66</span>
+                                                <span class="subtotal-price">${{ cart_subtotal|floatformat:2 }}</span>
                                             </li>
                                             <li class="checkout-btn">
                                                 <a href="{% url 'cart' %}">checkout</a>
                                             </li>
+                                            {% endif %}
                                         </ul>
                                     </div>
                                 </div>

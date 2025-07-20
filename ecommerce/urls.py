@@ -21,4 +21,12 @@ urlpatterns = [
     path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
     path('cart/apply-coupon/', views.apply_coupon, name='apply_coupon'),
 
+    # Checkout URLs
+    path('checkout/', views.CheckoutView.as_view(), name='checkout'),
+    path('apply-coupon/', views.apply_coupon, name='apply_coupon'),
+    path('remove-coupon/', views.remove_coupon, name='remove_coupon'),
+    path('check-payment-status/', views.check_payment_status, name='check_payment_status'),
+    path('mpesa-callback/', views.mpesa_callback, name='mpesa_callback'),
+    path('order-confirmation/<str:order_number>/', views.order_confirmation, name='order_confirmation'),
+
 ]
