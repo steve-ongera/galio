@@ -74,7 +74,9 @@ class CategoryAdmin(admin.ModelAdmin):
     image_preview.short_description = 'Image'
 
 
-# Brand Admin
+from django.contrib import admin
+from django.utils.html import format_html
+
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active', 'product_count', 'logo_preview']
@@ -83,7 +85,18 @@ class BrandAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     
     def product_count(self, obj):
-        return obj.product_set.count()
+        # Method 1: Use the default reverse relationship
+        try:
+            return obj.product_set.count()
+        except AttributeError:
+            # Method 2: Try custom related name if you defined one
+            try:
+                return obj.products.count()
+            except AttributeError:
+                # Method 3: Manual query if relationship is broken
+                from .models import Product
+                return Product.objects.filter(brand=obj).count()
+    
     product_count.short_description = 'Products'
     
     def logo_preview(self, obj):
@@ -91,7 +104,6 @@ class BrandAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" width="50" height="50" />', obj.logo.url)
         return "No Logo"
     logo_preview.short_description = 'Logo'
-
 
 # Product Image Inline
 class ProductImageInline(admin.TabularInline):

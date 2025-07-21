@@ -61,6 +61,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'galio.wsgi.application'
 
+# settings.py
+
+LOGIN_URL = 'login'  # the name of your login URL pattern
+LOGIN_REDIRECT_URL = '/'  # default redirect after login (only used if 'next' is not provided)
+
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

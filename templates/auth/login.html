@@ -78,6 +78,10 @@
                                     <a href="#" class="forget-pwd">Forget Password?</a>
                                 </div>
                             </div>
+
+                            {% if next %}
+                                <input type="hidden" name="next" value="{{ next }}">
+                            {% endif %}
                             
                             <div class="single-input-item">
                                 <button type="submit" class="sqr-btn btn-block">Sign In</button>

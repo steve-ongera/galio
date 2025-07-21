@@ -113,12 +113,12 @@
                                             {% for item in cart_items %}
                                             <li>
                                                 <div class="cart-img">
-                                                    <a href="{% url 'product_detail' item.product.id %}">
-                                                        <img src="{{ item.product.image.url|default:'assets/img/cart/default-cart.jpg' }}" alt="{{ item.product.name }}">
+                                                    <a href="{% url 'product_detail' slug=item.product.slug %}">
+                                                        <img src="{{ product.images.first.image.url }}" alt="image">
                                                     </a>
                                                 </div>
                                                 <div class="cart-info">
-                                                    <h4><a href="{% url 'product_detail' item.product.id %}">{{ item.product.name }}</a></h4>
+                                                    <h4><a href="{% url 'product_detail' slug=item.product.slug %}">{{ item.product.name }}</a></h4>
                                                     <span>${{ item.total_price|floatformat:2 }}</span>
                                                 </div>
                                                 <div class="del-icon">

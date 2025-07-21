@@ -61,7 +61,7 @@
                                     <br><small>Variant: {{ item.variant.get_attributes_display }}</small>
                                     {% endif %}
                                 </td>
-                                <td class="pro-price"><span>${{ item.unit_price }}</span></td>
+                                <td class="pro-price"><span>ksh{{ item.unit_price }}</span></td>
                                 <td class="pro-quantity">
                                     <div class="pro-qty">
                                         <form action="{% url 'update_cart_item' item.id %}" method="post" class="d-flex">
@@ -71,7 +71,7 @@
                                         </form>
                                     </div>
                                 </td>
-                                <td class="pro-subtotal"><span>${{ item.total_price }}</span></td>
+                                <td class="pro-subtotal"><span>ksh{{ item.total_price }}</span></td>
                                 <td class="pro-remove">
                                     <a href="{% url 'remove_from_cart' item.id %}"><i class="fa fa-trash-o"></i></a>
                                 </td>
@@ -97,7 +97,7 @@
                         </form>
                     </div>
                     <div class="cart-update mt-sm-16">
-                        <a href="{% url 'index' %}" class="sqr-btn">Continue Shopping</a>
+                        <a href="{% url 'product_list' %}" class="sqr-btn">Continue Shopping</a>
                     </div>
                 </div>
                 {% endif %}
@@ -115,7 +115,7 @@
                             <table class="table">
                                 <tr>
                                     <td>Sub Total</td>
-                                    <td>${{ cart_subtotal }}</td>
+                                    <td>ksh{{ cart_subtotal }}</td>
                                 </tr>
                                 <tr>
                                     <td>Shipping</td>
@@ -123,19 +123,19 @@
                                         {% if shipping_cost == 0 %}
                                         Free Shipping
                                         {% else %}
-                                        ${{ shipping_cost }}
+                                        ksh{{ shipping_cost }}
                                         {% endif %}
                                     </td>
                                 </tr>
                                 {% if coupon_discount > 0 %}
                                 <tr>
                                     <td>Discount ({{ coupon_code }})</td>
-                                    <td>-${{ coupon_discount }}</td>
+                                    <td>-ksh{{ coupon_discount }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr class="total">
                                     <td>Total</td>
-                                    <td class="total-amount">${{ cart_total }}</td>
+                                    <td class="total-amount">ksh{{ cart_total }}</td>
                                 </tr>
                             </table>
                         </div>

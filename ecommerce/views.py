@@ -168,39 +168,40 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
 from .models import User
 
-
+# Your existing login view (with small improvements)
 @csrf_protect
 def login_view(request):
     """Handle user login"""
     # Redirect authenticated users
     if request.user.is_authenticated:
-        return redirect('index')  # Change to your desired redirect URL
-    
+        next_page = request.GET.get('next', 'index')
+        return redirect(next_page)
+
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('rememberMe')
-        
+
         # Validation
         if not email or not password:
             messages.error(request, 'Please fill in all required fields')
             return render(request, 'auth/login.html')
-        
+
         # Authenticate user
         user = authenticate(request, username=email, password=password)
-        
+
         if user is not None:
             if user.is_active:
                 login(request, user)
-                
+
                 # Handle remember me functionality
                 if remember_me:
                     request.session.set_expiry(1209600)  # 2 weeks
                 else:
                     request.session.set_expiry(0)  # Session expires when browser closes
-                
+
                 messages.success(request, f'Welcome back, {user.first_name or user.email}!')
-                
+
                 # Redirect to next page or dashboard
                 next_page = request.GET.get('next', 'index')
                 return redirect(next_page)
@@ -208,8 +209,12 @@ def login_view(request):
                 messages.error(request, 'Your account has been disabled. Please contact support.')
         else:
             messages.error(request, 'Invalid email or password. Please try again.')
-    
-    return render(request, 'auth/login.html')
+
+    # Pass the next parameter to the template for hidden input
+    context = {
+        'next': request.GET.get('next', '')
+    }
+    return render(request, 'auth/login.html', context)
 
 
 @csrf_protect
@@ -611,30 +616,36 @@ def cart_view(request):
     return render(request, 'cart/cart.html', context)
 
 
-@login_required
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils.http import urlencode
+
 def add_to_cart(request, product_id):
+    if not request.user.is_authenticated:
+        # Get current URL and querystring (if any)
+        current_url = request.get_full_path()
+        login_url = reverse('login')  # replace with your actual login URL name
+        return redirect(f"{login_url}?{urlencode({'next': current_url})}")
+    
     product = get_object_or_404(Product, id=product_id)
     variant_id = request.POST.get('variant_id')  # If you have variants
-    
-    if request.user.is_authenticated:
-        cart, created = Cart.objects.get_or_create(user=request.user)
-    else:
-        session_key = request.session.session_key
-        cart, created = Cart.objects.get_or_create(session_key=session_key)
-    
-    # Check if item already in cart
+
+    cart, created = Cart.objects.get_or_create(user=request.user)
+
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product,
         variant_id=variant_id if variant_id else None,
         defaults={'quantity': 1}
     )
-    
+
     if not created:
         cart_item.quantity += 1
         cart_item.save()
-    
+
     return redirect('cart')
+
 
 def remove_from_cart(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id)
