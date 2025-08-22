@@ -35,4 +35,20 @@ urlpatterns = [
     path('filters/', views.search_filters, name='filters'),
     path('analytics/', views.search_analytics, name='analytics'),
 
+    # Account Profile URLs
+    path('account/profile/', views.account_profile, name='account_profile'),
+    path('account/orders/', views.my_orders, name='my_orders'),
+    path('account/order/<str:order_number>/', views.order_detail, name='order_detail'),
+    
+    # Address management URLs
+    path('account/address/add/', views.add_address, name='add_address'),
+    path('account/address/<int:address_id>/edit/', views.edit_address, name='edit_address'),
+    path('account/address/<int:address_id>/delete/', views.delete_address, name='delete_address'),
+    
+    # Order actions
+    path('account/order/<str:order_number>/cancel/', views.cancel_order, name='cancel_order'),
+    
+    # Contact Us URL
+    path('contact/', views.contact_us, name='contact_us'),
+
 ]

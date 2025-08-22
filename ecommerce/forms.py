@@ -340,3 +340,133 @@ class AddressSelectionForm(forms.Form):
                 initial='new',
                 required=False
             )
+
+
+from django import forms
+from django.contrib.auth.forms import UserChangeForm
+from .models import User, Address
+
+
+class UserProfileForm(forms.ModelForm):
+    """Form for updating user profile"""
+    
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'avatar']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'First Name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Last Name'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Email Address'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Phone Number'
+            }),
+            'date_of_birth': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'avatar': forms.FileInput(attrs={
+                'class': 'form-control-file'
+            }),
+        }
+
+
+class AddressForm(forms.ModelForm):
+    """Form for adding/editing addresses"""
+    
+    class Meta:
+        model = Address
+        fields = [
+            'address_type', 'first_name', 'last_name', 'company',
+            'address_line_1', 'address_line_2', 'city', 'state',
+            'postal_code', 'country', 'phone', 'is_default'
+        ]
+        widgets = {
+            'address_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'First Name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Last Name'
+            }),
+            'company': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Company (Optional)'
+            }),
+            'address_line_1': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Address Line 1'
+            }),
+            'address_line_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Address Line 2 (Optional)'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'City'
+            }),
+            'state': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'State/Province'
+            }),
+            'postal_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Postal Code'
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Country',
+                'value': 'Kenya'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Phone Number'
+            }),
+            'is_default': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+
+
+class ContactForm(forms.Form):
+    """Contact us form"""
+    name = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your Name'
+        })
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your Email'
+        })
+    )
+    subject = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Subject'
+        })
+    )
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your Message',
+            'rows': 6
+        })
+    )
