@@ -2124,3 +2124,260 @@ class AdvancedSearchFeatures:
                     pass
         
         return suggestions
+    
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import User, Order, Address, SiteSetting
+from .forms import UserProfileForm, AddressForm, ContactForm
+from django.db.models import Q
+
+
+@login_required
+def account_profile(request):
+    """User account profile view"""
+    user = request.user
+    addresses = user.addresses.all()
+    
+    # Get user statistics
+    total_orders = user.orders.count()
+    pending_orders = user.orders.filter(status='pending').count()
+    delivered_orders = user.orders.filter(status='delivered').count()
+    
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully.')
+            return redirect('account_profile')
+    else:
+        form = UserProfileForm(instance=user)
+    
+    context = {
+        'user': user,
+        'form': form,
+        'addresses': addresses,
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'delivered_orders': delivered_orders,
+    }
+    return render(request, 'account/profile.html', context)
+
+
+@login_required
+def my_orders(request):
+    """User orders listing view"""
+    user = request.user
+    
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
+    # Base queryset
+    orders = user.orders.all()
+    
+    # Apply filters
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    if search_query:
+        orders = orders.filter(
+            Q(order_number__icontains=search_query) |
+            Q(items__product__name__icontains=search_query)
+        ).distinct()
+    
+    # Pagination
+    paginator = Paginator(orders, 10)  # Show 10 orders per page
+    page_number = request.GET.get('page')
+    page_orders = paginator.get_page(page_number)
+    
+    # Order status choices for filter dropdown
+    status_choices = Order.ORDER_STATUS
+    
+    context = {
+        'orders': page_orders,
+        'status_choices': status_choices,
+        'current_status': status_filter,
+        'search_query': search_query,
+        'total_orders': orders.count(),
+    }
+    return render(request, 'account/orders.html', context)
+
+
+@login_required
+def order_detail(request, order_number):
+    """Individual order detail view"""
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    order_items = order.items.all()
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+    }
+    return render(request, 'account/order_detail.html', context)
+
+
+def contact_us(request):
+    """Contact us view"""
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            # Process the contact form
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
+            
+            # Send email to admin
+            try:
+                full_message = f"""
+                Name: {name}
+                Email: {email}
+                Subject: {subject}
+                
+                Message:
+                {message}
+                """
+                
+                send_mail(
+                    subject=f"Contact Form: {subject}",
+                    message=full_message,
+                    from_email=email,
+                    recipient_list=[settings.DEFAULT_FROM_EMAIL],
+                    fail_silently=False,
+                )
+                messages.success(request, 'Thank you for your message. We will get back to you soon!')
+                return redirect('contact_us')
+            except Exception as e:
+                messages.error(request, 'Sorry, there was an error sending your message. Please try again.')
+    else:
+        # Pre-fill form if user is authenticated
+        initial_data = {}
+        if request.user.is_authenticated:
+            initial_data = {
+                'name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+                'email': request.user.email,
+            }
+        form = ContactForm(initial=initial_data)
+    
+    # Get contact information from site settings
+    try:
+        contact_email = SiteSetting.objects.get(key='contact_email').value
+    except SiteSetting.DoesNotExist:
+        contact_email = 'support@galiostores.com'
+    
+    try:
+        contact_phone = SiteSetting.objects.get(key='contact_phone').value
+    except SiteSetting.DoesNotExist:
+        contact_phone = '+254 762 625 728'
+    
+    try:
+        contact_address = SiteSetting.objects.get(key='contact_address').value
+    except SiteSetting.DoesNotExist:
+        contact_address = 'Nairobi, Kenya'
+    
+    context = {
+        'form': form,
+        'contact_email': contact_email,
+        'contact_phone': contact_phone,
+        'contact_address': contact_address,
+    }
+    return render(request, 'contact/contact_us.html', context)
+
+
+@login_required
+def add_address(request):
+    """Add new address view"""
+    if request.method == 'POST':
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+            
+            # If this is set as default, remove default from other addresses of same type
+            if address.is_default:
+                Address.objects.filter(
+                    user=request.user,
+                    address_type=address.address_type,
+                    is_default=True
+                ).update(is_default=False)
+            
+            address.save()
+            messages.success(request, 'Address added successfully.')
+            return redirect('account_profile')
+    else:
+        form = AddressForm()
+    
+    context = {'form': form}
+    return render(request, 'account/add_address.html', context)
+
+
+@login_required
+def edit_address(request, address_id):
+    """Edit existing address view"""
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            address = form.save(commit=False)
+            
+            # If this is set as default, remove default from other addresses of same type
+            if address.is_default:
+                Address.objects.filter(
+                    user=request.user,
+                    address_type=address.address_type,
+                    is_default=True
+                ).exclude(id=address.id).update(is_default=False)
+            
+            address.save()
+            messages.success(request, 'Address updated successfully.')
+            return redirect('account_profile')
+    else:
+        form = AddressForm(instance=address)
+    
+    context = {'form': form, 'address': address}
+    return render(request, 'account/edit_address.html', context)
+
+
+@login_required
+@require_POST
+def delete_address(request, address_id):
+    """Delete address via AJAX"""
+    try:
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        address.delete()
+        return JsonResponse({'success': True, 'message': 'Address deleted successfully.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'Error deleting address.'})
+
+
+@login_required
+@require_POST
+def cancel_order(request, order_number):
+    """Cancel order if allowed"""
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    
+    # Only allow cancellation for pending orders
+    if order.status == 'pending':
+        order.status = 'cancelled'
+        order.save()
+        
+        # Restore stock quantities
+        for item in order.items.all():
+            if item.product.track_inventory:
+                item.product.stock_quantity += item.quantity
+                item.product.save()
+        
+        messages.success(request, f'Order {order.order_number} has been cancelled successfully.')
+    else:
+        messages.error(request, 'This order cannot be cancelled.')
+    
+    return redirect('my_orders')
