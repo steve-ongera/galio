@@ -82,7 +82,7 @@
                                         </div>
                                         <div class="shipping-content">
                                             <h5>free shipping</h5>
-                                            <span>On order over $199</span>
+                                            <span>On order over KES 4999</span>
                                         </div>
                                     </div> <!-- end single shipping -->
                                     <div class="single-block-shipping">
@@ -121,7 +121,7 @@
                                         </div>
                                         <div class="cart-total-price">
                                             <span>total</span>
-                                            ${{ cart_total|default:0.00|floatformat:2 }}
+                                            KES{{ cart_total|default:0.00|floatformat:2 }}
                                         </div>
                                         <ul class="cart-list">
                                             {% for item in cart_items %}
@@ -133,7 +133,7 @@
                                                 </div>
                                                 <div class="cart-info">
                                                     <h4><a href="{% url 'product_detail' slug=item.product.slug %}">{{ item.product.name }}</a></h4>
-                                                    <span>${{ item.total_price|floatformat:2 }}</span>
+                                                    <span>KES{{ item.total_price|floatformat:2 }}</span>
                                                 </div>
                                                 <div class="del-icon">
                                                     <i class="fa fa-times"></i>
@@ -148,7 +148,7 @@
                                             {% if cart_items %}
                                             <li class="mini-cart-price">
                                                 <span class="subtotal">subtotal : </span>
-                                                <span class="subtotal-price">${{ cart_subtotal|floatformat:2 }}</span>
+                                                <span class="subtotal-price">KES{{ cart_subtotal|floatformat:2 }}</span>
                                             </li>
                                             <li class="checkout-btn">
                                                 <a href="{% url 'cart' %}">checkout</a>

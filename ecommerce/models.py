@@ -447,8 +447,11 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            self.order_number = f"ORD-{timezone.now().strftime('%Y%m%d')}-{self.id or 1:04d}"
+            super().save(*args, **kwargs)  # Save first to get self.id
+            self.order_number = f"ORD-{timezone.now().strftime('%Y%m%d')}-{self.id:04d}"
+            kwargs["force_insert"] = False  # avoid duplicate insert
         super().save(*args, **kwargs)
+
 
 
 class OrderItem(models.Model):
@@ -462,6 +465,34 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f"{self.order.order_number} - {self.product.name}"
+
+
+class Payment(models.Model):
+    """Track payments for orders"""
+    PAYMENT_STATUS = (
+        ('PENDING', 'Pending'),
+        ('SUCCESS', 'Success'),
+        ('FAILED', 'Failed'),
+    )
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="payments")
+    checkout_request_id = models.CharField(max_length=100, unique=True)  # From Safaricom STK push response
+    mpesa_receipt = models.CharField(max_length=100, null=True, blank=True)  # Returned after success
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    transaction_date = models.CharField(max_length=20, null=True, blank=True)  # keep raw string first
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default="PENDING")
+    raw_response = models.JSONField(null=True, blank=True)  # store full Safaricom callback for auditing
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Payment {self.checkout_request_id} - {self.status}"
 
 
 class Newsletter(models.Model):

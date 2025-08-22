@@ -911,10 +911,10 @@ class CheckoutView(View):
                f"Phone: {address_data.get('phone', '')}"
     
     def calculate_shipping(self, cart):
-        return Decimal('70.00')  # Flat rate for now
+        return Decimal('00.00')  # Flat rate for now
     
     def calculate_tax(self, cart):
-        tax_rate = Decimal('0.16')  # 16% VAT in Kenya
+        tax_rate = Decimal('0.00')  # 00% VAT in Kenya
         return cart.total_price * tax_rate
     
     def calculate_total(self, cart):
