@@ -29,4 +29,10 @@ urlpatterns = [
     path('mpesa-callback/', views.mpesa_callback, name='mpesa_callback'),
     path('order-confirmation/<str:order_number>/', views.order_confirmation, name='order_confirmation'),
 
+    # Main search page
+    path('search/', views.ProductSearchView.as_view(), name='search'),
+    path('autocomplete/', views.search_autocomplete, name='autocomplete'),
+    path('filters/', views.search_filters, name='filters'),
+    path('analytics/', views.search_analytics, name='analytics'),
+
 ]

@@ -1594,3 +1594,336 @@ def search_filters(request):
         'price_range': price_range,
         'total_products': queryset.count()
     })
+
+
+# Additional views and helpers for search functionality
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q, F
+from django.core.cache import cache
+from .models import Product, Category, Brand, ProductView
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def search_analytics(request):
+    """Track search analytics"""
+    try:
+        data = json.loads(request.body)
+        query = data.get('query', '').strip()
+        
+        if not query:
+            return JsonResponse({'status': 'error', 'message': 'No query provided'})
+        
+        # Log search query for analytics
+        logger.info(f"Search query: {query}")
+        
+        # You can store search analytics in database
+        # SearchAnalytics.objects.create(
+        #     query=query,
+        #     user=request.user if request.user.is_authenticated else None,
+        #     session_key=request.session.session_key,
+        #     ip_address=get_client_ip(request),
+        #     timestamp=timezone.now()
+        # )
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        logger.error(f"Error tracking search analytics: {e}")
+        return JsonResponse({'status': 'error', 'message': 'Failed to track analytics'})
+
+
+def get_client_ip(request):
+    """Get client IP address"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+def track_product_view(request, product):
+    """Track product views for analytics"""
+    try:
+        ProductView.objects.update_or_create(
+            product=product,
+            user=request.user if request.user.is_authenticated else None,
+            session_key=request.session.session_key,
+            defaults={
+                'ip_address': get_client_ip(request),
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+            }
+        )
+        
+        # Update product view count
+        Product.objects.filter(id=product.id).update(view_count=F('view_count') + 1)
+        
+    except Exception as e:
+        logger.error(f"Error tracking product view: {e}")
+
+
+def get_trending_searches():
+    """Get trending search terms (implement based on your analytics data)"""
+    # This is a placeholder - implement based on your search analytics model
+    trending = [
+        'smartphone', 'laptop', 'wireless earbuds', 'smartwatch', 
+        'gaming chair', 'monitor', 'keyboard', 'mouse', 'webcam'
+    ]
+    return trending
+
+
+def get_popular_products_by_category(category_id, limit=10):
+    """Get popular products in a category"""
+    cache_key = f'popular_products_category_{category_id}_{limit}'
+    products = cache.get(cache_key)
+    
+    if not products:
+        products = Product.objects.filter(
+            category_id=category_id,
+            status='active'
+        ).order_by('-sales_count', '-view_count')[:limit]
+        
+        # Cache for 1 hour
+        cache.set(cache_key, products, 3600)
+    
+    return products
+
+
+def get_search_suggestions_for_query(query):
+    """Get enhanced search suggestions"""
+    suggestions = []
+    
+    # Product name matches
+    products = Product.objects.filter(
+        Q(name__icontains=query) & Q(status='active')
+    ).select_related('category', 'brand')[:5]
+    
+    for product in products:
+        suggestions.append({
+            'type': 'product',
+            'title': product.name,
+            'category': product.category.name,
+            'brand': product.brand.name if product.brand else '',
+            'price': str(product.price),
+            'url': product.get_absolute_url(),
+            'image': product.images.first().image.url if product.images.exists() else '',
+            'in_stock': product.is_in_stock,
+        })
+    
+    # Category matches
+    categories = Category.objects.filter(
+        Q(name__icontains=query) & Q(is_active=True)
+    )[:3]
+    
+    for category in categories:
+        suggestions.append({
+            'type': 'category',
+            'title': category.name,
+            'count': category.products.filter(status='active').count(),
+            'url': f'/search/?category={category.id}',
+        })
+    
+    # Brand matches
+    brands = Brand.objects.filter(
+        Q(name__icontains=query) & Q(is_active=True)
+    )[:3]
+    
+    for brand in brands:
+        suggestions.append({
+            'type': 'brand',
+            'title': brand.name,
+            'count': brand.product.filter(status='active').count(),
+            'url': f'/search/?brand={brand.id}',
+        })
+    
+    return suggestions
+
+
+class SearchRecommendations:
+    """Class to handle search recommendations and related products"""
+    
+    @staticmethod
+    def get_related_products(product, limit=6):
+        """Get products related to the current product"""
+        # Same category products
+        related = Product.objects.filter(
+            category=product.category,
+            status='active'
+        ).exclude(id=product.id)
+        
+        # If same brand, prioritize those
+        if product.brand:
+            related = related.extra(
+                select={'same_brand': f"CASE WHEN brand_id = {product.brand.id} THEN 1 ELSE 0 END"}
+            ).order_by('-same_brand', '-sales_count', '-view_count')
+        else:
+            related = related.order_by('-sales_count', '-view_count')
+        
+        return related[:limit]
+    
+    @staticmethod
+    def get_frequently_bought_together(product, limit=4):
+        """Get products frequently bought together"""
+        # This would require order analytics - placeholder implementation
+        return Product.objects.filter(
+            category=product.category,
+            status='active'
+        ).exclude(id=product.id).order_by('-sales_count')[:limit]
+    
+    @staticmethod
+    def get_customers_also_viewed(product, limit=6):
+        """Get products that customers also viewed"""
+        # This would require view analytics - placeholder implementation
+        return Product.objects.filter(
+            Q(category=product.category) | Q(brand=product.brand),
+            status='active'
+        ).exclude(id=product.id).order_by('-view_count')[:limit]
+
+
+# Context processor for search functionality
+def search_context_processor(request):
+    """Add search-related context to all templates"""
+    context = {
+        'search_categories': Category.objects.filter(
+            is_active=True, 
+            parent=None  # Only top-level categories
+        ).order_by('name')[:10],
+        'trending_searches': get_trending_searches()[:8],
+    }
+    
+    # Add current search query if exists
+    if request.GET.get('q'):
+        context['current_search'] = request.GET.get('q')
+    
+    return context
+
+
+# Utility functions for search
+def normalize_search_query(query):
+    """Normalize search query for better matching"""
+    import re
+    
+    # Remove special characters
+    query = re.sub(r'[^\w\s]', '', query)
+    
+    # Convert to lowercase
+    query = query.lower().strip()
+    
+    # Remove extra whitespace
+    query = re.sub(r'\s+', ' ', query)
+    
+    return query
+
+
+def get_search_filters_context(request, queryset):
+    """Get filter context for search results"""
+    # Get price range
+    price_range = queryset.aggregate(
+        min_price=models.Min('price'),
+        max_price=models.Max('price')
+    )
+    
+    # Get available categories
+    categories = Category.objects.filter(
+        products__in=queryset
+    ).annotate(
+        product_count=Count('products', filter=Q(products__in=queryset))
+    ).filter(product_count__gt=0).order_by('name')
+    
+    # Get available brands
+    brands = Brand.objects.filter(
+        product__in=queryset
+    ).annotate(
+        product_count=Count('product', filter=Q(product__in=queryset))
+    ).filter(product_count__gt=0).order_by('name')
+    
+    return {
+        'price_range': price_range,
+        'filter_categories': categories,
+        'filter_brands': brands,
+    }
+
+
+# SEO helpers for search pages
+def generate_search_meta_tags(query, results_count):
+    """Generate meta tags for search pages"""
+    if not query:
+        return {
+            'meta_title': 'Search Products',
+            'meta_description': 'Search through our wide range of products to find exactly what you need.',
+        }
+    
+    return {
+        'meta_title': f'Search Results for "{query}" - {results_count} Products Found',
+        'meta_description': f'Found {results_count} products matching "{query}". Browse and compare prices, read reviews, and shop with confidence.',
+    }
+
+
+# Advanced search features
+class AdvancedSearchFeatures:
+    """Advanced search features like spell correction, etc."""
+    
+    @staticmethod
+    def get_spell_suggestions(query):
+        """Get spelling suggestions for search query"""
+        # This is a placeholder - you could integrate with a spell-checking service
+        # or implement a simple edit distance algorithm
+        
+        common_typos = {
+            'phon': 'phone',
+            'lptop': 'laptop',
+            'computr': 'computer',
+            'camra': 'camera',
+            'hedphones': 'headphones',
+        }
+        
+        words = query.lower().split()
+        corrected_words = []
+        has_corrections = False
+        
+        for word in words:
+            if word in common_typos:
+                corrected_words.append(common_typos[word])
+                has_corrections = True
+            else:
+                corrected_words.append(word)
+        
+        if has_corrections:
+            return ' '.join(corrected_words)
+        
+        return None
+    
+    @staticmethod
+    def get_category_suggestions(query):
+        """Get category suggestions based on query"""
+        # Look for category keywords in query
+        category_keywords = {
+            'phone': ['mobile', 'smartphone', 'cell'],
+            'laptop': ['computer', 'notebook'],
+            'accessories': ['case', 'cover', 'charger', 'cable'],
+            'audio': ['headphones', 'speakers', 'earbuds'],
+            'gaming': ['game', 'console', 'controller'],
+        }
+        
+        query_lower = query.lower()
+        suggestions = []
+        
+        for category, keywords in category_keywords.items():
+            if any(keyword in query_lower for keyword in keywords + [category]):
+                try:
+                    cat = Category.objects.get(name__icontains=category, is_active=True)
+                    suggestions.append(cat)
+                except Category.DoesNotExist:
+                    pass
+        
+        return suggestions
