@@ -2289,7 +2289,7 @@ def contact_us(request):
         'contact_phone': contact_phone,
         'contact_address': contact_address,
     }
-    return render(request, 'contact/contact_us.html', context)
+    return render(request, 'account/contact_us.html', context)
 
 
 @login_required

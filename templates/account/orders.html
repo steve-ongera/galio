@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'account_profile' %}">My Account</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">My Orders</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- my orders wrapper start -->
+<div class="order-confirmation-wrapper">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- orders header start -->
+                <div class="order-confirmation-inner">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="order-success-message mb-30">
+                                <div class="success-icon text-center mb-20">
+                                    <i class="fa fa-list-alt"></i>
+                                </div>
+                                <div class="text-center">
+                                    <h3>My Orders</h3>
+                                    <p>Track and manage your order history.</p>
+                                    <div class="order-info mt-20">
+                                        <p>Total Orders: <strong>{{ total_orders }}</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- orders header end -->
+
+                <!-- orders filter section start -->
+                <div class="order-details-section mt-34">
+                    <div class="row mb-30">
+                        <div class="col-lg-12">
+                            <div class="order-filter-section">
+                                <form method="get" class="row">
+                                    <div class="col-md-4">
+                                        <select name="status" class="form-control">
+                                            <option value="">All Orders</option>
+                                            {% for value, label in status_choices %}
+                                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" name="search" class="form-control" placeholder="Search orders..." value="{{ search_query }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-primary">Filter</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- orders filter section end -->
+
+                <!-- orders list section start -->
+                <div class="order-details-section">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            {% if orders %}
+                            <div class="orders-table-wrapper">
+                                {% for order in orders %}
+                                <div class="order-item mb-30" style="border: 1px solid #ddd; padding: 20px; border-radius: 5px;">
+                                    <div class="order-header d-flex justify-content-between align-items-center mb-15">
+                                        <div class="order-info">
+                                            <h5>Order #{{ order.order_number }}</h5>
+                                            <p class="mb-0">Placed on {{ order.created_at|date:"F d, Y" }}</p>
+                                        </div>
+                                        <div class="order-status">
+                                            <span class="badge badge-{% if order.status == 'delivered' %}success{% elif order.status == 'pending' %}warning{% elif order.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                                                {{ order.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="order-summary">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="order-items">
+                                                    {% for item in order.items.all|slice:":3" %}
+                                                    <div class="order-item-detail d-flex align-items-center mb-10">
+                                                        {% if item.product.images.first %}
+                                                        <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;">
+                                                        {% endif %}
+                                                        <div>
+                                                            <strong>{{ item.product.name }}</strong>
+                                                            {% if item.variant %}
+                                                            <br><small>{{ item.variant.name }}</small>
+                                                            {% endif %}
+                                                            <br><small>Qty: {{ item.quantity }} × KSh{{ item.unit_price }}</small>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                    {% if order.items.count > 3 %}
+                                                    <p><small>and {{ order.items.count|add:"-3" }} more item{{ order.items.count|add:"-3"|pluralize }}...</small></p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 text-right">
+                                                <div class="order-total mb-15">
+                                                    <h5>KSh{{ order.total_amount }}</h5>
+                                                    <small>{{ order.items.count }} item{{ order.items.count|pluralize }}</small>
+                                                </div>
+                                                <div class="order-actions">
+                                                    <a href="{% url 'order_detail' order.order_number %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                                    {% if order.status == 'pending' %}
+                                                    <form method="post" action="{% url 'cancel_order' order.order_number %}" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this order?')">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                                    </form>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                
+                                <!-- pagination start -->
+                                {% if orders.has_other_pages %}
+                                <div class="pagination-wrapper text-center mt-30">
+                                    <nav aria-label="Page navigation">
+                                        <ul class="pagination justify-content-center">
+                                            {% if orders.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ orders.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+                                            </li>
+                                            {% endif %}
+                                            
+                                            {% for num in orders.paginator.page_range %}
+                                            {% if orders.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                            {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                                            </li>
+                                            {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if orders.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ orders.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </nav>
+                                </div>
+                                {% endif %}
+                                <!-- pagination end -->
+                            </div>
+                            {% else %}
+                            <div class="no-orders text-center py-50">
+                                <i class="fa fa-shopping-bag fa-3x mb-20" style="color: #ccc;"></i>
+                                <h4>No Orders Found</h4>
+                                <p>You haven't placed any orders yet.</p>
+                                <a href="{% url 'index' %}" class="buy-btn mt-20">
+                                    Start Shopping <i class="fa fa-shopping-cart"></i>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- orders list section end -->
+
+                <!-- action buttons start -->
+                <div class="order-actions mt-34">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="action-buttons text-center">
+                                <div class="quantity-cart-box d-flex align-items-center justify-content-center">
+                                    <div class="action_link">
+                                        <a class="buy-btn" href="{% url 'account_profile' %}">
+                                            Account Settings <i class="fa fa-user"></i>
+                                        </a>
+                                    </div>
+                                    <div class="action_link ml-10">
+                                        <a class="buy-btn" href="{% url 'index' %}">
+                                            Continue Shopping <i class="fa fa-shopping-cart"></i>
+                                        </a>
+                                    </div>
+                                    <div class="action_link ml-10">
+                                        <a class="buy-btn" href="{% url 'contact_us' %}">
+                                            Need Help? <i class="fa fa-question-circle"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- action buttons end -->
+            </div>
+
+            <!-- sidebar start -->
+            <div class="col-lg-3">
+                <div class="shop-sidebar-wrap fix mt-md-22 mt-sm-22">
+                    <!-- account menu start -->
+                    <div class="sidebar-widget mb-22">
+                        <div class="sidebar-title mb-20">
+                            <h3>My Account</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <ul class="list-unstyled">
+                                <li><a href="{% url 'account_profile' %}">Profile Settings</a></li>
+                                <li><a href="{% url 'my_orders' %}" class="active">My Orders</a></li>
+                                <li><a href="{% url 'add_address' %}">Manage Addresses</a></li>
+                                <li><a href="#">Change Password</a></li>
+                                <li><a href="{% url 'logout' %}">Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- account menu end -->
+
+                    <!-- order status filter start -->
+                    <div class="sidebar-widget mb-22">
+                        <div class="sidebar-title mb-20">
+                            <h3>Order Status</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <ul class="list-unstyled">
+                                <li><a href="?status=">All Orders</a></li>
+                                {% for value, label in status_choices %}
+                                <li><a href="?status={{ value }}" {% if current_status == value %}class="active"{% endif %}>{{ label }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- order status filter end -->
+
+                    <!-- help section start -->
+                    <div class="sidebar-widget mb-22">
+                        <div class="sidebar-title mb-20">
+                            <h3>Need Help?</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <p>Have questions about your orders?</p>
+                            <ul>
+                                <li>
+                                    <i class="fa fa-envelope"></i>
+                                    <a href="mailto:support@galiostores.com">support@galiostores.com</a>
+                                </li>
+                                <li>
+                                    <i class="fa fa-phone"></i>
+                                    <a href="tel:+254762625728">+254 762 625 728</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- help section end -->
+                </div>
+            </div>
+            <!-- sidebar end -->
+        </div>
+    </div>
+</div>
+<!-- my orders wrapper end -->
+{% endblock %}

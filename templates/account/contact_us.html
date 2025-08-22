@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Contact Us</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- contact us wrapper start -->
+<div class="order-confirmation-wrapper">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- contact us header start -->
+                <div class="order-confirmation-inner">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="order-success-message mb-30">
+                                <div class="success-icon text-center mb-20">
+                                    <i class="fa fa-envelope"></i>
+                                </div>
+                                <div class="text-center">
+                                    <h3>Get in Touch</h3>
+                                    <p>We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- contact us header end -->
+
+                <!-- contact form section start -->
+                <div class="order-details-section mt-34">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="order-review-info">
+                                <ul class="nav review-tab">
+                                    <li>
+                                        <a class="active" data-toggle="tab" href="#contact_form">Send Message</a>
+                                    </li>
+                                    <li>
+                                        <a data-toggle="tab" href="#contact_info">Contact Information</a>
+                                    </li>
+                                    <li>
+                                        <a data-toggle="tab" href="#faq_section">FAQ</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content reviews-tab">
+                                    <div class="tab-pane fade show active" id="contact_form">
+                                        <div class="tab-one">
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="form-group">
+                                                            <label for="{{ form.name.id_for_label }}">Your Name *</label>
+                                                            {{ form.name }}
+                                                            {% if form.name.errors %}
+                                                            <div class="text-danger">{{ form.name.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="form-group">
+                                                            <label for="{{ form.email.id_for_label }}">Your Email *</label>
+                                                            {{ form.email }}
+                                                            {% if form.email.errors %}
+                                                            <div class="text-danger">{{ form.email.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-group">
+                                                            <label for="{{ form.subject.id_for_label }}">Subject *</label>
+                                                            {{ form.subject }}
+                                                            {% if form.subject.errors %}
+                                                            <div class="text-danger">{{ form.subject.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-group">
+                                                            <label for="{{ form.message.id_for_label }}">Your Message *</label>
+                                                            {{ form.message }}
+                                                            {% if form.message.errors %}
+                                                            <div class="text-danger">{{ form.message.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-20">
+                                                    <button type="submit" class="buy-btn">
+                                                        Send Message <i class="fa fa-paper-plane"></i>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="contact_info">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h5>Contact Details</h5>
+                                                <div class="contact-info-item mb-20">
+                                                    <div class="contact-icon">
+                                                        <i class="fa fa-envelope"></i>
+                                                    </div>
+                                                    <div class="contact-details">
+                                                        <h6>Email Address</h6>
+                                                        <p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>
+                                                    </div>
+                                                </div>
+                                                <div class="contact-info-item mb-20">
+                                                    <div class="contact-icon">
+                                                        <i class="fa fa-phone"></i>
+                                                    </div>
+                                                    <div class="contact-details">
+                                                        <h6>Phone Number</h6>
+                                                        <p><a href="tel:{{ contact_phone }}">{{ contact_phone }}</a></p>
+                                                    </div>
+                                                </div>
+                                                <div class="contact-info-item mb-20">
+                                                    <div class="contact-icon">
+                                                        <i class="fa fa-map-marker"></i>
+                                                    </div>
+                                                    <div class="contact-details">
+                                                        <h6>Address</h6>
+                                                        <p>{{ contact_address }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h5>Business Hours</h5>
+                                                <div class="business-hours">
+                                                    <div class="hours-item d-flex justify-content-between">
+                                                        <span>Monday - Friday:</span>
+                                                        <span>9:00 AM - 6:00 PM</span>
+                                                    </div>
+                                                    <div class="hours-item d-flex justify-content-between">
+                                                        <span>Saturday:</span>
+                                                        <span>9:00 AM - 4:00 PM</span>
+                                                    </div>
+                                                    <div class="hours-item d-flex justify-content-between">
+                                                        <span>Sunday:</span>
+                                                        <span>Closed</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <h5 class="mt-30">Follow Us</h5>
+                                                <div class="social-links">
+                                                    <a href="#" class="social-link"><i class="fa fa-facebook"></i></a>
+                                                    <a href="#" class="social-link"><i class="fa fa-twitter"></i></a>
+                                                    <a href="#" class="social-link"><i class="fa fa-instagram"></i></a>
+                                                    <a href="#" class="social-link"><i class="fa fa-linkedin"></i></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="faq_section">
+                                        <div class="faq-section">
+                                            <h5 class="mb-20">Frequently Asked Questions</h5>
+                                            
+                                            <div class="faq-item mb-20">
+                                                <h6>How can I track my order?</h6>
+                                                <p>You can track your order by logging into your account and visiting the "My Orders" section. You'll find tracking information and status updates for all your orders.</p>
+                                            </div>
+                                            
+                                            <div class="faq-item mb-20">
+                                                <h6>What is your return policy?</h6>
+                                                <p>We offer a 30-day return policy for most items. Items must be in original condition with tags attached. Please contact us to initiate a return.</p>
+                                            </div>
+                                            
+                                            <div class="faq-item mb-20">
+                                                <h6>How long does shipping take?</h6>
+                                                <p>Standard shipping typically takes 3-7 business days within Kenya. Express shipping options are available for faster delivery.</p>
+                                            </div>
+                                            
+                                            <div class="faq-item mb-20">
+                                                <h6>What payment methods do you accept?</h6>
+                                                <p>We accept M-Pesa, credit/debit cards, bank transfers, and cash on delivery for eligible orders.</p>
+                                            </div>
+                                            
+                                            <div class="faq-item mb-20">
+                                                <h6>Can I change or cancel my order?</h6>
+                                                <p>You can cancel your order within 24 hours of placing it, provided it hasn't been shipped. Please contact us immediately for order modifications.</p>
+                                            </div>
+                                            
+                                            <div class="text-center mt-30">
+                                                <p>Still have questions? <a href="#contact_form" onclick="showTab('contact_form')">Send us a message</a></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- contact form section end -->
+
+                
+            </div>
+
+            <!-- sidebar start -->
+            <div class="col-lg-3">
+                <div class="shop-sidebar-wrap fix mt-md-22 mt-sm-22">
+                    <!-- quick contact start -->
+                    <div class="sidebar-widget mb-22">
+                        <div class="sidebar-title mb-20">
+                            <h3>Quick Contact</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <div class="quick-contact-item mb-15">
+                                <i class="fa fa-envelope"></i>
+                                <div>
+                                    <strong>Email</strong>
+                                    <p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>
+                                </div>
+                            </div>
+                            <div class="quick-contact-item mb-15">
+                                <i class="fa fa-phone"></i>
+                                <div>
+                                    <strong>Phone</strong>
+                                    <p><a href="tel:{{ contact_phone }}">{{ contact_phone }}</a></p>
+                                </div>
+                            </div>
+                            <div class="quick-contact-item">
+                                <i class="fa fa-comments"></i>
+                                <div>
+                                    <strong>Live Chat</strong>
+                                    <p>Available 24/7</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- quick contact end -->
+
+                    <!-- response time start -->
+                    <div class="sidebar-widget mb-22">
+                        <div class="sidebar-title mb-20">
+                            <h3>Response Time</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <p>We typically respond to all inquiries within:</p>
+                            <ul>
+                                <li><strong>Email:</strong> 24 hours</li>
+                                <li><strong>Phone:</strong> During business hours</li>
+                                <li><strong>Live Chat:</strong> Instantly</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- response time end -->
+
+                    
+                    <!-- help topics end -->
+                </div>
+            </div>
+            <!-- sidebar end -->
+        </div>
+    </div>
+</div>
+<!-- contact us wrapper end -->
+
+<script>
+function showTab(tabId) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.review-tab a').forEach(function(tab) {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-pane').forEach(function(pane) {
+        pane.classList.remove('show', 'active');
+    });
+    
+    // Add active class to clicked tab and corresponding content
+    document.querySelector('a[href="#' + tabId + '"]').classList.add('active');
+    document.getElementById(tabId).classList.add('show', 'active');
+}
+</script>
+{% endblock %}
