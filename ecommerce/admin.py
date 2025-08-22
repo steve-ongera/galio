@@ -453,7 +453,151 @@ class BannerAdmin(admin.ModelAdmin):
         queryset.update(is_active=False)
     deactivate_banners.short_description = "Deactivate selected banners"
 
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+import json
+from .models import Payment
 
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = [
+        'checkout_request_id',
+        'order_link',
+        'amount',
+        'phone_number',
+        'status_badge',
+        'mpesa_receipt',
+        'transaction_date',
+        'created_at'
+    ]
+    
+    list_filter = [
+        'status',
+        'created_at',
+        'updated_at',
+        'transaction_date'
+    ]
+    
+    search_fields = [
+        'checkout_request_id',
+        'mpesa_receipt',
+        'phone_number',
+        'order__order_number',
+        'order__user__email'
+    ]
+    
+    readonly_fields = [
+        'checkout_request_id',
+        'created_at',
+        'updated_at',
+        'formatted_raw_response'
+    ]
+    
+    fieldsets = (
+        ('Payment Information', {
+            'fields': (
+                'order',
+                'checkout_request_id',
+                'status',
+                'amount'
+            )
+        }),
+        ('M-Pesa Details', {
+            'fields': (
+                'mpesa_receipt',
+                'phone_number',
+                'transaction_date'
+            )
+        }),
+        ('System Information', {
+            'fields': (
+                'created_at',
+                'updated_at',
+                'formatted_raw_response'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    list_per_page = 25
+    date_hierarchy = 'created_at'
+    
+    def order_link(self, obj):
+        """Create a clickable link to the order"""
+        if obj.order:
+            url = reverse('admin:ecommerce_order_change', args=[obj.order.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.order.order_number)
+        return '-'
+    order_link.short_description = 'Order'
+    order_link.admin_order_field = 'ecommerce__order_number'
+    
+    def status_badge(self, obj):
+        """Display status with colored badge"""
+        colors = {
+            'PENDING': 'orange',
+            'SUCCESS': 'green',
+            'FAILED': 'red'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    status_badge.admin_order_field = 'status'
+    
+    def formatted_raw_response(self, obj):
+        """Format JSON response for better readability"""
+        if obj.raw_response:
+            try:
+                formatted = json.dumps(obj.raw_response, indent=2)
+                return format_html('<pre style="max-height: 300px; overflow: auto;">{}</pre>', formatted)
+            except (TypeError, ValueError):
+                return obj.raw_response
+        return 'No response data'
+    formatted_raw_response.short_description = 'Raw Response'
+    
+    def get_queryset(self, request):
+        """Optimize queries"""
+        queryset = super().get_queryset(request)
+        return queryset.select_related('order', 'order__user')
+    
+    actions = ['mark_as_success', 'mark_as_failed', 'mark_as_pending']
+    
+    def mark_as_success(self, request, queryset):
+        """Mark selected payments as successful"""
+        updated = queryset.update(status='SUCCESS')
+        self.message_user(request, f'{updated} payment(s) marked as successful.')
+    mark_as_success.short_description = "Mark selected payments as successful"
+    
+    def mark_as_failed(self, request, queryset):
+        """Mark selected payments as failed"""
+        updated = queryset.update(status='FAILED')
+        self.message_user(request, f'{updated} payment(s) marked as failed.')
+    mark_as_failed.short_description = "Mark selected payments as failed"
+    
+    def mark_as_pending(self, request, queryset):
+        """Mark selected payments as pending"""
+        updated = queryset.update(status='PENDING')
+        self.message_user(request, f'{updated} payment(s) marked as pending.')
+    mark_as_pending.short_description = "Mark selected payments as pending"
+    
+    def has_add_permission(self, request):
+        """Prevent manual creation of payments"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Only allow deletion for failed payments or superusers"""
+        if request.user.is_superuser:
+            return True
+        if obj and obj.status == 'FAILED':
+            return True
+        return False
+    
 # Customize Admin Site
 admin.site.site_header = 'Ecommerce Admin'
 admin.site.site_title = 'Ecommerce Admin Portal'

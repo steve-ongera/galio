@@ -693,6 +693,7 @@ import logging
 
 from .models import Cart, CartItem, Order, OrderItem, Address, Coupon, User
 from .forms import CheckoutForm, BillingAddressForm, ShippingAddressForm
+from .models import Payment
 
 # Set up logging for M-Pesa debugging
 logger = logging.getLogger(__name__)
@@ -997,12 +998,27 @@ class CheckoutView(View):
             logger.info(f"M-Pesa STK Push response: {response}")
             
             if response.get('ResponseCode') == '0':
-                # Store checkout request ID for later verification
+                # Get checkout request ID from response
                 checkout_request_id = response.get('CheckoutRequestID')
+                
+                # Create a Payment record
+                Payment.objects.create(
+                    order=order,
+                    checkout_request_id=checkout_request_id,
+                    status="PENDING",
+                    raw_response=response
+                )
+
+                # Store checkout request ID for later verification
                 request.session['checkout_request_id'] = checkout_request_id
                 request.session['order_id'] = order.id
                 
                 logger.info(f"STK Push successful. CheckoutRequestID: {checkout_request_id}")
+                
+                # Clear cart after successful payment initiation
+                cart = self.get_cart(request)
+                cart.items.all().delete()
+                cart.delete()
                 
                 # Check if this is an AJAX request
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1028,7 +1044,7 @@ class CheckoutView(View):
                     })
                 else:
                     return self.get(request)
-                
+                    
         except Exception as e:
             logger.exception(f"M-Pesa payment initialization failed: {str(e)}")
             messages.error(request, f"Payment initialization failed: {str(e)}")
@@ -1167,9 +1183,6 @@ def mpesa_callback(request):
     
     try:
         callback_data = json.loads(request.body)
-        logger.info(f"Parsed callback data: {callback_data}")
-        
-        # Extract relevant data
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
         result_code = stk_callback.get('ResultCode')
         checkout_request_id = stk_callback.get('CheckoutRequestID')
@@ -1177,41 +1190,49 @@ def mpesa_callback(request):
         
         logger.info(f"Callback details - ResultCode: {result_code}, CheckoutRequestID: {checkout_request_id}, ResultDesc: {result_desc}")
         
+        # Find Payment by checkout_request_id
+        payment = Payment.objects.filter(checkout_request_id=checkout_request_id).first()
+        if not payment:
+            logger.error(f"No Payment found for CheckoutRequestID: {checkout_request_id}")
+            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+        
+        order = payment.order
+        
         if result_code == 0:  # Success
-            logger.info("Payment successful")
-            
-            # Extract transaction details
             callback_metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
-            transaction_data = {}
-            
-            for item in callback_metadata:
-                name = item.get('Name')
-                value = item.get('Value')
-                transaction_data[name] = value
+            transaction_data = {item['Name']: item.get('Value') for item in callback_metadata}
             
             logger.info(f"Transaction data: {transaction_data}")
             
-            mpesa_receipt_number = transaction_data.get('MpesaReceiptNumber')
-            transaction_date = transaction_data.get('TransactionDate')
-            phone_number = transaction_data.get('PhoneNumber')
+            payment.status = "SUCCESS"
+            payment.mpesa_receipt = transaction_data.get('MpesaReceiptNumber')
+            payment.phone_number = transaction_data.get('PhoneNumber')
+            payment.transaction_date = transaction_data.get('TransactionDate')
+            payment.amount = transaction_data.get('Amount')
+            payment.raw_response = callback_data
+            payment.save()
             
-            # You'll need to implement order update logic here
-            # For now, just log the successful payment
-            logger.info(f"Payment completed - Receipt: {mpesa_receipt_number}, Date: {transaction_date}, Phone: {phone_number}")
+            order.payment_status = "paid"
+            order.save()
             
-            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+            logger.info(f"Payment completed - Receipt: {payment.mpesa_receipt}, Date: {payment.transaction_date}, Phone: {payment.phone_number}")
+        
+        else:  # Failed
+            payment.status = "FAILED"
+            payment.raw_response = callback_data
+            payment.save()
             
-        else:
-            # Payment failed
+            order.payment_status = "failed"
+            order.save()
+            
             logger.error(f"Payment failed - ResultCode: {result_code}, ResultDesc: {result_desc}")
-            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
-            
-    except json.JSONDecodeError as e:
-        logger.exception(f"JSON decode error in callback: {str(e)}")
-        return JsonResponse({'ResultCode': 1, 'ResultDesc': f'JSON decode error: {str(e)}'})
+        
+        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+    
     except Exception as e:
         logger.exception(f"Error processing callback: {str(e)}")
         return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Error processing callback: {str(e)}'})
+
 
 
 def apply_coupon(request):
