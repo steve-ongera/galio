@@ -485,12 +485,10 @@ document.addEventListener('DOMContentLoaded', function() {
             createPwdCheckbox.addEventListener('change', function() {
                 if (this.checked) {
                     passwordField.style.display = 'block';
-                    // Add required attribute to password field
                     const pwdInput = document.getElementById('pwd');
                     if (pwdInput) pwdInput.required = true;
                 } else {
                     passwordField.style.display = 'none';
-                    // Remove required attribute
                     const pwdInput = document.getElementById('pwd');
                     if (pwdInput) pwdInput.required = false;
                 }
@@ -504,12 +502,10 @@ document.addEventListener('DOMContentLoaded', function() {
             shipToDifferentCheckbox.addEventListener('change', function() {
                 if (this.checked) {
                     shippingFields.style.display = 'block';
-                    // Add required attributes to shipping fields
                     const requiredShippingFields = shippingFields.querySelectorAll('input[required]');
                     requiredShippingFields.forEach(field => field.required = true);
                 } else {
                     shippingFields.style.display = 'none';
-                    // Remove required attributes
                     const shippingInputs = shippingFields.querySelectorAll('input');
                     shippingInputs.forEach(field => field.required = false);
                 }
@@ -544,7 +540,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (hasErrors) {
                     e.preventDefault();
-                    // Focus on first invalid field
                     const firstInvalid = this.querySelector('.is-invalid');
                     if (firstInvalid) {
                         firstInvalid.focus();
@@ -573,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.classList.add('modal-open');
             }
             if (loading) loading.style.display = 'block';
+            if (message) message.innerHTML = '<p class="text-info">Sending STK Push to your phone...</p>';
 
             // Submit form via fetch
             const form = document.getElementById('checkout-form');
@@ -598,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else {
                     if (message) {
-                        message.innerHTML = '<p class="text-danger">Payment failed. Please try again.</p>';
+                        message.innerHTML = '<p class="text-danger">' + (data.message || 'Payment failed. Please try again.') + '</p>';
                     }
                 }
             })
@@ -613,32 +609,79 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function checkPaymentStatus(checkoutRequestId) {
             let pollCount = 0;
-            const maxPolls = 24; // Poll for 2 minutes (24 * 5 seconds)
+            const maxPolls = 60; // Poll for 5 minutes (60 * 5 seconds)
+            const message = document.getElementById('mpesa-message');
 
-            const pollInterval = setInterval(function() {
+            function pollStatus() {
                 pollCount++;
                 
                 fetch('/check-payment-status/?checkout_request_id=' + checkoutRequestId)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'completed') {
-                        clearInterval(pollInterval);
-                        window.location.href = '/order-confirmation/' + data.order_number + '/';
-                    } else if (data.status === 'failed' || pollCount >= maxPolls) {
-                        clearInterval(pollInterval);
-                        const message = document.getElementById('mpesa-message');
+                    console.log('Payment status check:', data);
+                    
+                    if (data.status === 'SUCCESS') {
+                        // Payment successful
                         if (message) {
-                            message.innerHTML = '<p class="text-danger">Payment timeout or failed. Please try again.</p>';
+                            message.innerHTML = '<p class="text-success">Payment completed successfully! Redirecting...</p>';
+                        }
+                        setTimeout(function() {
+                            window.location.href = data.redirect_url || '/order-confirmation/' + data.order_number + '/';
+                        }, 2000);
+                        
+                    } else if (data.status === 'FAILED') {
+                        // Payment failed
+                        if (message) {
+                            message.innerHTML = '<p class="text-danger">' + (data.message || 'Payment failed. Please try again.') + '</p>';
+                        }
+                        setTimeout(function() {
+                            if (data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            } else {
+                                location.reload(); // Reload checkout page
+                            }
+                        }, 3000);
+                        
+                    } else if (data.status === 'PENDING') {
+                        // Still pending, update message and continue polling
+                        if (message) {
+                            message.innerHTML = '<p class="text-info">' + (data.message || 'Please complete the payment on your phone...') + '</p>';
+                        }
+                        
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000); // Check again in 5 seconds
+                        } else {
+                            // Timeout
+                            if (message) {
+                                message.innerHTML = '<p class="text-warning">Payment verification timed out. Please check your M-Pesa messages or contact support if money was deducted.</p>';
+                            }
+                        }
+                        
+                    } else {
+                        // Unknown status, treat as pending but with caution
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            if (message) {
+                                message.innerHTML = '<p class="text-warning">Unable to verify payment status. Please contact support.</p>';
+                            }
                         }
                     }
                 })
                 .catch(error => {
                     console.error('Status check error:', error);
-                    if (pollCount >= maxPolls) {
-                        clearInterval(pollInterval);
+                    if (pollCount < maxPolls) {
+                        setTimeout(pollStatus, 5000); // Retry
+                    } else {
+                        if (message) {
+                            message.innerHTML = '<p class="text-danger">Unable to verify payment status. Please contact support.</p>';
+                        }
                     }
                 });
-            }, 5000);
+            }
+            
+            // Start polling
+            pollStatus();
         }
 
     } else {
@@ -670,20 +713,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 $('#mpesa-loading').show();
                 $('#mpesaModal').modal('show');
+                $('#mpesa-message').html('<p class="text-info">Sending STK Push to your phone...</p>');
                 
                 $.ajax({
                     url: $(this).attr('action') || window.location.pathname,
                     type: 'POST',
                     data: $(this).serialize(),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
                         $('#mpesa-loading').hide();
                         if (response.success) {
                             $('#mpesa-message').html('<p class="text-success">' + response.message + '</p>');
                             if (response.checkout_request_id) {
-                                checkPaymentStatus(response.checkout_request_id);
+                                checkPaymentStatusJQuery(response.checkout_request_id);
                             }
                         } else {
-                            $('#mpesa-message').html('<p class="text-danger">Payment failed. Please try again.</p>');
+                            $('#mpesa-message').html('<p class="text-danger">' + (response.message || 'Payment failed. Please try again.') + '</p>');
                         }
                     },
                     error: function() {
@@ -694,24 +741,61 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        function checkPaymentStatus(checkoutRequestId) {
-            var pollInterval = setInterval(function() {
+        function checkPaymentStatusJQuery(checkoutRequestId) {
+            let pollCount = 0;
+            const maxPolls = 60;
+
+            function pollStatus() {
+                pollCount++;
+                
                 $.get('/check-payment-status/', {
                     checkout_request_id: checkoutRequestId
-                }, function(response) {
-                    if (response.status === 'completed') {
-                        clearInterval(pollInterval);
-                        window.location.href = '/order-confirmation/' + response.order_number + '/';
-                    } else if (response.status === 'failed') {
-                        clearInterval(pollInterval);
-                        $('#mpesa-message').html('<p class="text-danger">Payment failed. Please try again.</p>');
+                })
+                .done(function(response) {
+                    console.log('Payment status check:', response);
+                    
+                    if (response.status === 'SUCCESS') {
+                        $('#mpesa-message').html('<p class="text-success">Payment completed successfully! Redirecting...</p>');
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url || '/order-confirmation/' + response.order_number + '/';
+                        }, 2000);
+                        
+                    } else if (response.status === 'FAILED') {
+                        $('#mpesa-message').html('<p class="text-danger">' + (response.message || 'Payment failed. Please try again.') + '</p>');
+                        setTimeout(function() {
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                location.reload();
+                            }
+                        }, 3000);
+                        
+                    } else if (response.status === 'PENDING') {
+                        $('#mpesa-message').html('<p class="text-info">' + (response.message || 'Please complete the payment on your phone...') + '</p>');
+                        
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            $('#mpesa-message').html('<p class="text-warning">Payment verification timed out. Please check your M-Pesa messages or contact support if money was deducted.</p>');
+                        }
+                    } else {
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            $('#mpesa-message').html('<p class="text-warning">Unable to verify payment status. Please contact support.</p>');
+                        }
+                    }
+                })
+                .fail(function() {
+                    if (pollCount < maxPolls) {
+                        setTimeout(pollStatus, 5000);
+                    } else {
+                        $('#mpesa-message').html('<p class="text-danger">Unable to verify payment status. Please contact support.</p>');
                     }
                 });
-            }, 5000);
-
-            setTimeout(function() {
-                clearInterval(pollInterval);
-            }, 120000);
+            }
+            
+            pollStatus();
         }
     }
 });

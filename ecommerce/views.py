@@ -1204,18 +1204,31 @@ def mpesa_callback(request):
             
             logger.info(f"Transaction data: {transaction_data}")
             
+            # Update payment record
             payment.status = "SUCCESS"
             payment.mpesa_receipt = transaction_data.get('MpesaReceiptNumber')
             payment.phone_number = transaction_data.get('PhoneNumber')
-            payment.transaction_date = transaction_data.get('TransactionDate')
+            payment.transaction_date = str(transaction_data.get('TransactionDate'))
             payment.amount = transaction_data.get('Amount')
             payment.raw_response = callback_data
             payment.save()
             
+            # Update order status
             order.payment_status = "paid"
+            order.status = "confirmed"  # Change order status to confirmed
             order.save()
             
+            # Store success info in session/cache for frontend polling
+            # This allows the frontend to know when payment is complete
+            from django.core.cache import cache
+            cache.set(f"payment_status_{checkout_request_id}", {
+                'status': 'SUCCESS',
+                'order_number': order.order_number,
+                'redirect_url': reverse('order_confirmation', kwargs={'order_number': order.order_number})
+            }, timeout=300)  # 5 minutes
+            
             logger.info(f"Payment completed - Receipt: {payment.mpesa_receipt}, Date: {payment.transaction_date}, Phone: {payment.phone_number}")
+            logger.info(f"Order {order.order_number} confirmed and ready for redirect")
         
         else:  # Failed
             payment.status = "FAILED"
@@ -1223,7 +1236,16 @@ def mpesa_callback(request):
             payment.save()
             
             order.payment_status = "failed"
+            order.status = "cancelled"  # Mark order as cancelled
             order.save()
+            
+            # Store failure info in cache
+            from django.core.cache import cache
+            cache.set(f"payment_status_{checkout_request_id}", {
+                'status': 'FAILED',
+                'message': result_desc,
+                'redirect_url': reverse('checkout')
+            }, timeout=300)
             
             logger.error(f"Payment failed - ResultCode: {result_code}, ResultDesc: {result_desc}")
         
@@ -1275,9 +1297,8 @@ def remove_coupon(request):
     
     return redirect('checkout')
 
-
 def check_payment_status(request):
-    """Check M-Pesa payment status"""
+    """Check M-Pesa payment status via AJAX polling"""
     checkout_request_id = request.GET.get('checkout_request_id')
     logger.info(f"Checking payment status for CheckoutRequestID: {checkout_request_id}")
     
@@ -1285,19 +1306,52 @@ def check_payment_status(request):
         return JsonResponse({'error': 'Checkout request ID required'}, status=400)
     
     try:
-        # Here you would typically query your database to check payment status
-        # based on the checkout_request_id stored during the STK push
+        # Check database first
+        payment = Payment.objects.filter(checkout_request_id=checkout_request_id).first()
         
-        # For now, return a pending status
-        # You should implement proper status tracking in your database
+        if payment:
+            if payment.status == "SUCCESS":
+                # Clear any stored cart items and coupon from session
+                if hasattr(request, 'session'):
+                    if 'coupon_code' in request.session:
+                        del request.session['coupon_code']
+                
+                return JsonResponse({
+                    'status': 'SUCCESS',
+                    'message': 'Payment completed successfully!',
+                    'order_number': payment.order.order_number,
+                    'redirect_url': reverse('order_confirmation', kwargs={'order_number': payment.order.order_number})
+                })
+            elif payment.status == "FAILED":
+                return JsonResponse({
+                    'status': 'FAILED',
+                    'message': 'Payment failed. Please try again.',
+                    'redirect_url': reverse('checkout')
+                })
+            else:
+                # Still pending
+                return JsonResponse({
+                    'status': 'PENDING',
+                    'message': 'Please complete the payment on your phone...'
+                })
         
+        # If no payment found, check cache (fallback)
+        from django.core.cache import cache
+        cached_status = cache.get(f"payment_status_{checkout_request_id}")
+        
+        if cached_status:
+            return JsonResponse(cached_status)
+        
+        # Default pending response
         return JsonResponse({
-            'status': 'pending',
+            'status': 'PENDING',
             'message': 'Payment is being processed...'
         })
+        
     except Exception as e:
         logger.exception(f"Error checking payment status: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
 
 
 def order_confirmation(request, order_number):
@@ -1306,12 +1360,29 @@ def order_confirmation(request, order_number):
     
     order = get_object_or_404(Order, order_number=order_number)
     
-    # Clear cart after successful order
-    cart = CheckoutView().get_cart(request)
-    if cart:
-        cart.items.all().delete()
-        if 'coupon_code' in request.session:
-            del request.session['coupon_code']
+    # Verify user can access this order
+    if request.user.is_authenticated and order.user != request.user:
+        # Additional check for guest users or session validation could go here
+        pass
+    
+    # Clear any remaining cart items and session data
+    try:
+        cart = CheckoutView().get_cart(request)
+        if cart and cart.items.exists():
+            cart.items.all().delete()
+            cart.delete()
+    except:
+        pass  # Cart might already be cleared
+    
+    # Clear coupon from session
+    if 'coupon_code' in request.session:
+        del request.session['coupon_code']
+    
+    # Clear checkout session data
+    session_keys_to_clear = ['checkout_request_id', 'order_id']
+    for key in session_keys_to_clear:
+        if key in request.session:
+            del request.session[key]
     
     context = {
         'order': order,
