@@ -97,8 +97,22 @@
                                 </div>
                                 <div class="header-middle-block">
                                     <div class="header-middle-searchbox">
-                                        <input type="text" placeholder="Search...">
-                                        <button class="search-btn"><i class="fa fa-search"></i></button>
+                                        <form id="search-form" method="get" action="{% url 'search' %}" class="search-form">
+                                            <div class="search-input-container">
+                                                <input type="search" 
+                                                    id="search-input" 
+                                                    name="q" 
+                                                    placeholder="Search for products..." 
+                                                    value="{{ request.GET.q }}"
+                                                    autocomplete="off"
+                                                    class="search-input">
+                                                <button type="submit" class="search-btn">
+                                                    <i class="fa fa-search"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                        {% comment %} <input type="text" placeholder="Search...">
+                                        <button class="search-btn"><i class="fa fa-search"></i></button> {% endcomment %}
                                     </div>
                                     <div class="header-mini-cart">
                                         <div class="mini-cart-btn">

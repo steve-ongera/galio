@@ -19,7 +19,7 @@
                 <div class="breadcrumb-wrap">
                     <nav aria-label="breadcrumb">
                         <ul class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
                             <li class="breadcrumb-item active" aria-current="page">
                                 {% if search_query %}
                                     Search: "{{ search_query }}"
@@ -162,7 +162,76 @@
                                     {% if current_filters.category %}<input type="hidden" name="category" value="{{ current_filters.category }}">{% endif %}
                                     {% if current_filters.brand %}<input type="hidden" name="brand" value="{{ current_filters.brand }}">{% endif %}
                                     
-                                    <div class="product-content">
+                                    <div class="price-inputs">
+                                        <div class="form-group">
+                                            <label for="min_price">Min Price</label>
+                                            <input type="number" class="form-control" id="min_price" name="min_price" 
+                                                   value="{{ current_filters.min_price|default:'' }}" placeholder="Min">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="max_price">Max Price</label>
+                                            <input type="number" class="form-control" id="max_price" name="max_price" 
+                                                   value="{{ current_filters.max_price|default:'' }}" placeholder="Max">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm">Apply Filter</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- pricing filter end -->
+                </div>
+            </div>
+            <!-- sidebar end -->
+
+            <!-- product main wrap start -->
+            <div class="col-lg-9 order-1 order-lg-2">
+                <div class="shop-top-bar mb-35">
+                    <div class="select-shoing-wrap">
+                        <div class="shop-select">
+                            <label>Sort By:</label>
+                            <select onchange="updateSort(this.value)">
+                                <option value="relevance" {% if current_filters.sort == "relevance" %}selected{% endif %}>Relevance</option>
+                                <option value="price_asc" {% if current_filters.sort == "price_asc" %}selected{% endif %}>Price: Low to High</option>
+                                <option value="price_desc" {% if current_filters.sort == "price_desc" %}selected{% endif %}>Price: High to Low</option>
+                                <option value="name_asc" {% if current_filters.sort == "name_asc" %}selected{% endif %}>Name: A to Z</option>
+                                <option value="name_desc" {% if current_filters.sort == "name_desc" %}selected{% endif %}>Name: Z to A</option>
+                                <option value="newest" {% if current_filters.sort == "newest" %}selected{% endif %}>Newest First</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- product view wrapper area start -->
+                <div class="shop-bottom-area">
+                    {% if products %}
+                    <div class="row">
+                        {% for product in products %}
+                        <div class="col-lg-4 col-md-6 col-sm-6">
+                            <!-- product single grid item start -->
+                            <div class="product-item mb-30">
+                                <div class="product-thumb">
+                                    <a href="{{ product.get_absolute_url }}">
+                                        {% with product.images.all|first as first_image %}
+                                        {% if first_image %}
+                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% else %}
+                                        <img src="{% static 'assets/img/product/no-image.jpg' %}" class="img-pri" alt="{{ product.name }}">
+                                        {% endif %}
+                                        {% endwith %}
+                                    </a>
+                                    {% if product.is_featured or product.is_hot_deal %}
+                                    <div class="product-label">
+                                        <span>hot</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if not product.is_in_stock %}
+                                    <div class="product-label out-of-stock">
+                                        <span>out of stock</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="product-content">
                                     <h4><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h4>
                                     <div class="pricebox">
                                         {% if product.is_on_sale %}
@@ -188,81 +257,7 @@
                             </div>
                             <!-- product single grid item end -->
 
-                            <!-- product single list item start -->
-                            <div class="product-list-item mb-30">
-                                <div class="product-thumb">
-                                    <a href="{{ product.get_absolute_url }}">
-                                        {% with product.images.all|first as first_image %}
-                                        {% if first_image %}
-                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
-                                        {% else %}
-                                        <img src="{% static 'assets/img/product/no-image.jpg' %}" class="img-pri" alt="{{ product.name }}">
-                                        {% endif %}
-                                        {% endwith %}
-                                    </a>
-                                    {% if product.is_featured or product.is_hot_deal %}
-                                    <div class="product-label">
-                                        <span>hot</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <div class="product-list-content">
-                                    <h3><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
-                                    <div class="ratings">
-                                        {% for i in "12345" %}
-                                            {% if forloop.counter <= product.average_rating %}
-                                            <span class="good"><i class="fa fa-star"></i></span>
-                                            {% else %}
-                                            <span><i class="fa fa-star"></i></span>
-                                            {% endif %}
-                                        {% endfor %}
-                                        <div class="pro-review">
-                                            <span>{{ product.review_count }} review{{ product.review_count|pluralize }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="pricebox">
-                                        {% if product.is_on_sale %}
-                                        <span class="regular-price">Ksh {{ product.price }}</span>
-                                        <span class="old-price"><del>Ksh {{ product.compare_price }}</del></span>
-                                        {% else %}
-                                        <span class="regular-price">Ksh {{ product.price }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <p>{{ product.short_description|truncatewords:20 }}</p>
-                                    <div class="product-availability">
-                                        {% if product.is_in_stock %}
-                                        <span class="in-stock"><i class="fa fa-check"></i> In Stock</span>
-                                        {% else %}
-                                        <span class="out-of-stock"><i class="fa fa-times"></i> Out of Stock</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="product-list-action-link">
-                                        {% if product.is_in_stock %}
-                                        <a class="buy-btn add-to-cart" href="#" data-product-id="{{ product.id }}" 
-                                           data-toggle="tooltip" data-placement="top" title="Add to cart">
-                                            Add to Cart <i class="fa fa-shopping-cart"></i> 
-                                        </a>
-                                        {% else %}
-                                        <a class="buy-btn disabled" href="#" 
-                                           data-toggle="tooltip" data-placement="top" title="Out of Stock">
-                                            Out of Stock <i class="fa fa-ban"></i> 
-                                        </a>
-                                        {% endif %}
-                                        <a href="#" data-toggle="modal" data-target="#quick_view" data-product-id="{{ product.id }}"> 
-                                            <span data-toggle="tooltip" data-placement="top" title="Quick view">
-                                                <i class="fa fa-search"></i>
-                                            </span> 
-                                        </a>
-                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Wishlist"
-                                           class="add-to-wishlist" data-product-id="{{ product.id }}">
-                                            <i class="fa fa-heart-o"></i>
-                                        </a>
-                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Compare">
-                                            <i class="fa fa-refresh"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+                            
                             <!-- product single list item end -->
                         </div> <!-- product single column end -->
                         {% endfor %}
@@ -566,4 +561,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

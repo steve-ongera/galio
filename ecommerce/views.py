@@ -1184,6 +1184,15 @@ import re
 from django.db.models import Min, Max
 from django.db import models
 
+import re
+from django.db.models import (
+    Q, Count, Avg, Case, When, Value, IntegerField,
+    FloatField, F, ExpressionWrapper
+)
+from django.views.generic import ListView
+from .models import Product, Category, Brand
+
+
 class ProductSearchView(ListView):
     """Advanced product search view with fuzzy matching and filters"""
     model = Product
@@ -1209,16 +1218,13 @@ class ProductSearchView(ListView):
         
         # Apply filters
         if category_id:
-            # Include subcategories
             try:
                 category = Category.objects.get(id=category_id)
                 category_ids = [category.id]
-                # Get all subcategory IDs
                 subcategories = category.children.all()
                 for subcat in subcategories:
                     category_ids.append(subcat.id)
                     category_ids.extend([c.id for c in subcat.children.all()])
-                
                 queryset = queryset.filter(category_id__in=category_ids)
             except Category.DoesNotExist:
                 pass
@@ -1240,7 +1246,7 @@ class ProductSearchView(ListView):
 
         if in_stock_only:
             queryset = queryset.filter(
-                Q(track_inventory=False) | 
+                Q(track_inventory=False) |
                 Q(track_inventory=True, stock_quantity__gt=0)
             )
 
@@ -1251,68 +1257,53 @@ class ProductSearchView(ListView):
 
     def apply_search_query(self, queryset, query):
         """Apply advanced search with multiple matching strategies"""
-        
-        # Strategy 1: Exact matches (highest priority)
         exact_match = Q(name__iexact=query) | Q(sku__iexact=query)
-        
-        # Strategy 2: Contains matches
-        contains_match = Q(name__icontains=query) | Q(description__icontains=query) | Q(short_description__icontains=query)
-        
-        # Strategy 3: Word matches
+        contains_match = (
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(short_description__icontains=query)
+        )
+
         words = query.split()
         word_queries = Q()
         for word in words:
-            if len(word) > 2:  # Skip very short words
+            if len(word) > 2:
                 word_queries |= (
                     Q(name__icontains=word) |
                     Q(description__icontains=word) |
                     Q(category__name__icontains=word) |
                     Q(brand__name__icontains=word)
                 )
-        
-        # Strategy 4: Fuzzy matching for similar words
+
         fuzzy_queries = self.get_fuzzy_queries(query)
-        
-        # Combine all strategies
+
         search_filter = exact_match | contains_match | word_queries | fuzzy_queries
-        
         return queryset.filter(search_filter)
 
     def get_fuzzy_queries(self, query):
-        """Generate fuzzy search queries for typos and similar words"""
         fuzzy_q = Q()
-        
-        # Common typos and variations
         variations = self.generate_query_variations(query)
-        
-        for variation in variations:
+        for variation in variations[:20]:
             fuzzy_q |= (
                 Q(name__icontains=variation) |
                 Q(description__icontains=variation) |
                 Q(category__name__icontains=variation) |
                 Q(brand__name__icontains=variation)
             )
-        
         return fuzzy_q
 
     def generate_query_variations(self, query):
-        """Generate common variations and typos"""
         variations = []
-        
-        # Remove special characters
         clean_query = re.sub(r'[^\w\s]', '', query.lower())
         variations.append(clean_query)
-        
-        # Single character typos (for short queries)
+
         if len(query) <= 6:
-            # Character substitutions
             for i in range(len(query)):
                 for char in 'abcdefghijklmnopqrstuvwxyz':
                     if char != query[i].lower():
                         variation = query[:i] + char + query[i+1:]
                         variations.append(variation)
-        
-        # Common word substitutions
+
         substitutions = {
             'phone': ['fone', 'phon'],
             'mobile': ['mobil', 'moble'],
@@ -1323,7 +1314,7 @@ class ProductSearchView(ListView):
             'headphone': ['headfone', 'hedphone'],
             'speaker': ['speakr', 'speker'],
         }
-        
+
         query_lower = query.lower()
         for correct, typos in substitutions.items():
             if correct in query_lower:
@@ -1332,17 +1323,17 @@ class ProductSearchView(ListView):
             for typo in typos:
                 if typo in query_lower:
                     variations.append(query_lower.replace(typo, correct))
-        
-        return list(set(variations))  # Remove duplicates
+
+        return list(set(variations))
 
     def apply_sorting(self, queryset, sort_by, query=None):
-        """Apply sorting to queryset"""
+        """Apply sorting to queryset without ambiguous 'name' errors"""
         if sort_by == 'price_low':
-            return queryset.order_by('price', 'name')
+            return queryset.order_by('price', 'id')
         elif sort_by == 'price_high':
-            return queryset.order_by('-price', 'name')
+            return queryset.order_by('-price', 'id')
         elif sort_by == 'name_asc':
-            return queryset.order_by('name')
+            return queryset.order_by('name')  # safe: Product.name
         elif sort_by == 'name_desc':
             return queryset.order_by('-name')
         elif sort_by == 'newest':
@@ -1351,21 +1342,18 @@ class ProductSearchView(ListView):
             return queryset.annotate(avg_rating=Avg('reviews__rating')).order_by('-avg_rating', '-created_at')
         elif sort_by == 'popular':
             return queryset.order_by('-sales_count', '-view_count')
-        else:  # relevance (default)
+        else:  # relevance
             if query:
-                # Boost exact matches and popular products
-                return queryset.extra(
-                    select={
-                        'relevance_score': """
-                            CASE 
-                                WHEN LOWER(name) = LOWER(%s) THEN 100
-                                WHEN LOWER(name) LIKE LOWER(%s) THEN 80
-                                WHEN LOWER(description) LIKE LOWER(%s) THEN 60
-                                ELSE 40
-                            END + (sales_count * 0.1) + (view_count * 0.05)
-                        """
-                    },
-                    select_params=[query, f'%{query}%', f'%{query}%']
+                return queryset.annotate(
+                    relevance_score=Case(
+                        When(name__iexact=query, then=Value(100)),
+                        When(name__icontains=query, then=Value(80)),
+                        When(description__icontains=query, then=Value(60)),
+                        default=Value(40),
+                        output_field=IntegerField()
+                    ) +
+                    ExpressionWrapper(F('sales_count') * 0.1, output_field=FloatField()) +
+                    ExpressionWrapper(F('view_count') * 0.05, output_field=FloatField())
                 ).order_by('-relevance_score', '-created_at')
             else:
                 return queryset.order_by('-is_featured', '-sales_count', '-created_at')
@@ -1373,10 +1361,12 @@ class ProductSearchView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         query = self.request.GET.get('q', '')
-        
+
+        queryset = self.get_queryset()
+
         context.update({
             'search_query': query,
-            'total_products': self.get_queryset().count(),
+            'total_products': queryset.count(),
             'categories': self.get_filtered_categories(),
             'brands': self.get_filtered_brands(),
             'price_range': self.get_price_range(),
@@ -1384,29 +1374,27 @@ class ProductSearchView(ListView):
             'suggestions': self.get_search_suggestions(query) if query else [],
             'related_searches': self.get_related_searches(query) if query else [],
         })
-        
         return context
 
     def get_filtered_categories(self):
-        """Get categories that have products matching the current search"""
         queryset = self.get_queryset()
+        category_ids = queryset.values_list('category_id', flat=True).distinct()
         return Category.objects.filter(
-            products__in=queryset
+            id__in=category_ids
         ).annotate(
-            product_count=Count('products', filter=Q(products__in=queryset))
+            product_count=Count('products')
         ).filter(product_count__gt=0).order_by('name')
 
     def get_filtered_brands(self):
-        """Get brands that have products matching the current search"""
         queryset = self.get_queryset()
+        brand_ids = queryset.values_list('brand_id', flat=True).distinct()
         return Brand.objects.filter(
-            product__in=queryset
+            id__in=brand_ids
         ).annotate(
-            product_count=Count('product', filter=Q(product__in=queryset))
+            product_count=Count('product')
         ).filter(product_count__gt=0).order_by('name')
 
     def get_price_range(self):
-        """Get price range for current search results"""
         queryset = self.get_queryset()
         if queryset.exists():
             prices = queryset.aggregate(
@@ -1417,7 +1405,6 @@ class ProductSearchView(ListView):
         return {'min_price': 0, 'max_price': 0}
 
     def get_current_filters(self):
-        """Get currently applied filters"""
         return {
             'category': self.request.GET.get('category'),
             'brand': self.request.GET.get('brand'),
@@ -1428,14 +1415,12 @@ class ProductSearchView(ListView):
         }
 
     def get_search_suggestions(self, query):
-        """Get search suggestions based on query"""
         suggestions = []
-        
-        # Category suggestions
+
         categories = Category.objects.filter(
             Q(name__icontains=query) | Q(description__icontains=query)
         )[:5]
-        
+
         for category in categories:
             suggestions.append({
                 'type': 'category',
@@ -1443,8 +1428,7 @@ class ProductSearchView(ListView):
                 'url': f'/search/?category={category.id}',
                 'count': category.products.filter(status='active').count()
             })
-        
-        # Brand suggestions
+
         brands = Brand.objects.filter(name__icontains=query)[:3]
         for brand in brands:
             suggestions.append({
@@ -1453,12 +1437,11 @@ class ProductSearchView(ListView):
                 'url': f'/search/?brand={brand.id}',
                 'count': brand.product.filter(status='active').count()
             })
-        
-        # Product name suggestions
+
         products = Product.objects.filter(
             Q(name__icontains=query) & Q(status='active')
         ).distinct()[:5]
-        
+
         for product in products:
             suggestions.append({
                 'type': 'product',
@@ -1467,36 +1450,30 @@ class ProductSearchView(ListView):
                 'price': product.price,
                 'image': product.images.first().image.url if product.images.exists() else None
             })
-        
+
         return suggestions
 
     def get_related_searches(self, query):
-        """Get related search terms"""
         related = []
-        
-        # Find products that match and extract similar terms
         products = Product.objects.filter(
             Q(name__icontains=query) | Q(description__icontains=query)
         ).values_list('name', flat=True)[:10]
-        
-        # Extract common words from matching products
+
         words = set()
         for product_name in products:
             product_words = re.findall(r'\w+', product_name.lower())
             words.update([word for word in product_words if len(word) > 3])
-        
-        # Remove the original query words
+
         query_words = set(re.findall(r'\w+', query.lower()))
         related_words = words - query_words
-        
-        # Create related search suggestions
+
         for word in list(related_words)[:5]:
             related.append({
                 'text': f"{query} {word}",
                 'url': f'/search/?q={query}+{word}'
             })
-        
         return related
+
 
 
 def search_autocomplete(request):
