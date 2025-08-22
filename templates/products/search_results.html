@@ -1,0 +1,569 @@
+<!-- products/search_results.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if search_query %}
+        Search results for "{{ search_query }}"
+    {% else %}
+        Search Products
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- breadcrumb area start -->
+<div class="breadcrumb-area">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="breadcrumb-wrap">
+                    <nav aria-label="breadcrumb">
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">
+                                {% if search_query %}
+                                    Search: "{{ search_query }}"
+                                {% else %}
+                                    Search Products
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- breadcrumb area end -->
+
+<!-- page wrapper start -->
+<div class="page-main-wrapper">
+    <div class="container">
+        <!-- Search results summary -->
+        {% if search_query %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="search-results-summary">
+                    <h4>Search Results for "{{ search_query }}"</h4>
+                    <p>{{ total_products }} product{{ total_products|pluralize }} found</p>
+                    
+                    <!-- Search suggestions -->
+                    {% if suggestions %}
+                    <div class="search-suggestions mt-3">
+                        <h6>Related suggestions:</h6>
+                        <div class="suggestion-tags">
+                            {% for suggestion in suggestions %}
+                                {% if suggestion.type == 'category' %}
+                                <a href="{{ suggestion.url }}" class="suggestion-tag">
+                                    {{ suggestion.text }} ({{ suggestion.count }})
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Related searches -->
+                    {% if related_searches %}
+                    <div class="related-searches mt-2">
+                        <small>Related searches: </small>
+                        {% for related in related_searches %}
+                        <a href="{{ related.url }}" class="related-search-link">{{ related.text }}</a>
+                        {% if not forloop.last %} | {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <!-- sidebar start -->
+            <div class="col-lg-3 order-2 order-lg-1">
+                <div class="shop-sidebar-wrap mt-md-28 mt-sm-28">
+                    <!-- Active filters -->
+                    {% if current_filters.category or current_filters.brand or current_filters.min_price or current_filters.max_price %}
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>Active Filters</h3>
+                        </div>
+                        <div class="active-filters">
+                            {% if current_filters.category %}
+                            <span class="filter-tag">
+                                Category: {{ current_filters.category }}
+                                <a href="{% url 'search' %}?q={{ search_query }}" class="remove-filter">×</a>
+                            </span>
+                            {% endif %}
+                            {% if current_filters.brand %}
+                            <span class="filter-tag">
+                                Brand: {{ current_filters.brand }}
+                                <a href="{% url 'search' %}?q={{ search_query }}" class="remove-filter">×</a>
+                            </span>
+                            {% endif %}
+                            {% if current_filters.min_price or current_filters.max_price %}
+                            <span class="filter-tag">
+                                Price: ${{ current_filters.min_price|default:"0" }} - ${{ current_filters.max_price|default:"∞" }}
+                                <a href="{% url 'search' %}?q={{ search_query }}" class="remove-filter">×</a>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- sidebar categories start -->
+                    {% if categories %}
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-category">
+                            <ul>
+                                <li class="title"><i class="fa fa-bars"></i> Categories</li>
+                                {% for category in categories %}
+                                <li>
+                                    <a href="?q={{ search_query }}&category={{ category.id }}">{{ category.name }}</a>
+                                    <span>({{ category.product_count }})</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <!-- sidebar categories end -->
+
+                    <!-- brands start -->
+                    {% if brands %}
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>Brands</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <ul>
+                                {% for brand in brands %}
+                                <li>
+                                    <i class="fa fa-angle-right"></i>
+                                    <a href="?q={{ search_query }}&brand={{ brand.id }}">{{ brand.name }}</a>
+                                    <span>({{ brand.product_count }})</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <!-- brands end -->
+
+                    <!-- pricing filter start -->
+                    <div class="sidebar-widget mb-30">
+                        <div class="sidebar-title mb-10">
+                            <h3>Filter by Price</h3>
+                        </div>
+                        <div class="sidebar-widget-body">
+                            <div class="price-filter-form">
+                                <form method="get" action="">
+                                    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+                                    {% if current_filters.category %}<input type="hidden" name="category" value="{{ current_filters.category }}">{% endif %}
+                                    {% if current_filters.brand %}<input type="hidden" name="brand" value="{{ current_filters.brand }}">{% endif %}
+                                    
+                                    <div class="product-content">
+                                    <h4><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h4>
+                                    <div class="pricebox">
+                                        {% if product.is_on_sale %}
+                                        <span class="regular-price">Ksh {{ product.price }}</span>
+                                        <span class="old-price"><del>Ksh {{ product.compare_price }}</del></span>
+                                        {% else %}
+                                        <span class="regular-price">Ksh {{ product.price }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ratings">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= product.average_rating %}
+                                            <span class="good"><i class="fa fa-star"></i></span>
+                                            {% else %}
+                                            <span><i class="fa fa-star"></i></span>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <div class="pro-review">
+                                            <span>{{ product.review_count }} review{{ product.review_count|pluralize }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- product single grid item end -->
+
+                            <!-- product single list item start -->
+                            <div class="product-list-item mb-30">
+                                <div class="product-thumb">
+                                    <a href="{{ product.get_absolute_url }}">
+                                        {% with product.images.all|first as first_image %}
+                                        {% if first_image %}
+                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% else %}
+                                        <img src="{% static 'assets/img/product/no-image.jpg' %}" class="img-pri" alt="{{ product.name }}">
+                                        {% endif %}
+                                        {% endwith %}
+                                    </a>
+                                    {% if product.is_featured or product.is_hot_deal %}
+                                    <div class="product-label">
+                                        <span>hot</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="product-list-content">
+                                    <h3><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
+                                    <div class="ratings">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= product.average_rating %}
+                                            <span class="good"><i class="fa fa-star"></i></span>
+                                            {% else %}
+                                            <span><i class="fa fa-star"></i></span>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <div class="pro-review">
+                                            <span>{{ product.review_count }} review{{ product.review_count|pluralize }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="pricebox">
+                                        {% if product.is_on_sale %}
+                                        <span class="regular-price">Ksh {{ product.price }}</span>
+                                        <span class="old-price"><del>Ksh {{ product.compare_price }}</del></span>
+                                        {% else %}
+                                        <span class="regular-price">Ksh {{ product.price }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <p>{{ product.short_description|truncatewords:20 }}</p>
+                                    <div class="product-availability">
+                                        {% if product.is_in_stock %}
+                                        <span class="in-stock"><i class="fa fa-check"></i> In Stock</span>
+                                        {% else %}
+                                        <span class="out-of-stock"><i class="fa fa-times"></i> Out of Stock</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="product-list-action-link">
+                                        {% if product.is_in_stock %}
+                                        <a class="buy-btn add-to-cart" href="#" data-product-id="{{ product.id }}" 
+                                           data-toggle="tooltip" data-placement="top" title="Add to cart">
+                                            Add to Cart <i class="fa fa-shopping-cart"></i> 
+                                        </a>
+                                        {% else %}
+                                        <a class="buy-btn disabled" href="#" 
+                                           data-toggle="tooltip" data-placement="top" title="Out of Stock">
+                                            Out of Stock <i class="fa fa-ban"></i> 
+                                        </a>
+                                        {% endif %}
+                                        <a href="#" data-toggle="modal" data-target="#quick_view" data-product-id="{{ product.id }}"> 
+                                            <span data-toggle="tooltip" data-placement="top" title="Quick view">
+                                                <i class="fa fa-search"></i>
+                                            </span> 
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Wishlist"
+                                           class="add-to-wishlist" data-product-id="{{ product.id }}">
+                                            <i class="fa fa-heart-o"></i>
+                                        </a>
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="Compare">
+                                            <i class="fa fa-refresh"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- product single list item end -->
+                        </div> <!-- product single column end -->
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- No products found -->
+                    <div class="no-products-found text-center py-5">
+                        <div class="no-products-icon mb-3">
+                            <i class="fa fa-search fa-5x text-muted"></i>
+                        </div>
+                        <h3>No products found</h3>
+                        {% if search_query %}
+                        <p>Sorry, we couldn't find any products matching "<strong>{{ search_query }}</strong>"</p>
+                        
+                        <div class="search-suggestions mt-4">
+                            <h5>Try these suggestions:</h5>
+                            <ul class="list-unstyled">
+                                <li>• Check your spelling</li>
+                                <li>• Try different keywords</li>
+                                <li>• Use more general terms</li>
+                                <li>• Browse our categories instead</li>
+                            </ul>
+                        </div>
+
+                        <!-- Popular categories as alternatives -->
+                        {% if categories %}
+                        <div class="alternative-categories mt-4">
+                            <h6>Or browse these popular categories:</h6>
+                            <div class="category-links">
+                                {% for category in categories|slice:":6" %}
+                                <a href="?category={{ category.id }}" class="btn btn-outline-primary btn-sm mr-2 mb-2">
+                                    {{ category.name }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p>Start searching to find amazing products!</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <!-- product item end -->
+                </div>
+                <!-- product view wrapper area end -->
+
+                <!-- start pagination area -->
+                {% if page_obj and page_obj.paginator.num_pages > 1 %}
+                <div class="paginatoin-area text-center pt-28">
+                    <div class="row">
+                        <div class="col-12">
+                            <ul class="pagination-box">
+                                {% if page_obj.has_previous %}
+                                <li>
+                                    <a class="Previous" href="?{% if search_query %}q={{ search_query }}&{% endif %}page={{ page_obj.previous_page_number }}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.brand %}&brand={{ current_filters.brand }}{% endif %}{% if current_filters.min_price %}&min_price={{ current_filters.min_price }}{% endif %}{% if current_filters.max_price %}&max_price={{ current_filters.max_price }}{% endif %}{% if current_filters.sort %}&sort={{ current_filters.sort }}{% endif %}">Previous</a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="active"><a href="#">{{ num }}</a></li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li><a href="?{% if search_query %}q={{ search_query }}&{% endif %}page={{ num }}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.brand %}&brand={{ current_filters.brand }}{% endif %}{% if current_filters.min_price %}&min_price={{ current_filters.min_price }}{% endif %}{% if current_filters.max_price %}&max_price={{ current_filters.max_price }}{% endif %}{% if current_filters.sort %}&sort={{ current_filters.sort }}{% endif %}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li>
+                                    <a class="Next" href="?{% if search_query %}q={{ search_query }}&{% endif %}page={{ page_obj.next_page_number }}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.brand %}&brand={{ current_filters.brand }}{% endif %}{% if current_filters.min_price %}&min_price={{ current_filters.min_price }}{% endif %}{% if current_filters.max_price %}&max_price={{ current_filters.max_price }}{% endif %}{% if current_filters.sort %}&sort={{ current_filters.sort }}{% endif %}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                <!-- end pagination area -->
+            </div>
+            <!-- product main wrap end -->
+        </div>
+    </div>
+</div>
+<!-- page wrapper end -->
+
+<style>
+.search-results-summary {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.suggestion-tags .suggestion-tag {
+    display: inline-block;
+    background: #e9ecef;
+    padding: 5px 10px;
+    margin: 2px;
+    border-radius: 15px;
+    text-decoration: none;
+    color: #333;
+    font-size: 12px;
+}
+
+.suggestion-tags .suggestion-tag:hover {
+    background: #007bff;
+    color: white;
+}
+
+.related-search-link {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.related-search-link:hover {
+    text-decoration: underline;
+}
+
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-tag {
+    background: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.remove-filter {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.remove-filter:hover {
+    color: #ff4444;
+}
+
+.price-filter-form .price-inputs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.price-filter-form .form-group {
+    flex: 1;
+}
+
+.price-filter-form .form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.product-availability {
+    margin: 10px 0;
+}
+
+.in-stock {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.out-of-stock {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.product-label.out-of-stock {
+    background: #dc3545;
+}
+
+.buy-btn.disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.no-products-found {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.alternative-categories .category-links a {
+    margin: 2px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .price-filter-form .price-inputs {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .active-filters {
+        flex-direction: column;
+    }
+    
+    .suggestion-tags {
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+// Update sort functionality
+function updateSort(sortValue) {
+    const url = new URL(window.location);
+    url.searchParams.set('sort', sortValue);
+    window.location.href = url.toString();
+}
+
+// Add to cart functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartButtons = document.querySelectorAll('.add-to-cart');
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            
+            // Add your AJAX call here to add product to cart
+            fetch('/cart/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    'product_id': productId,
+                    'quantity': 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    alert('Product added to cart!');
+                    // Update cart count if you have one
+                } else {
+                    alert('Error adding product to cart');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding product to cart');
+            });
+        });
+    });
+
+    // Add to wishlist functionality
+    const wishlistButtons = document.querySelectorAll('.add-to-wishlist');
+    wishlistButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            
+            // Add your AJAX call here to add product to wishlist
+            fetch('/wishlist/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    'product_id': productId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Change heart icon to filled
+                    this.querySelector('i').classList.remove('fa-heart-o');
+                    this.querySelector('i').classList.add('fa-heart');
+                    alert('Product added to wishlist!');
+                } else {
+                    alert('Error adding product to wishlist');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding product to wishlist');
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 
