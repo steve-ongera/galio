@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
+{% block content %}
 
-{% block extra_css %}
 <style>
     .invalid-feedback {
         display: block;
@@ -17,9 +17,7 @@
         height: 2rem;
     }
 </style>
-{% endblock %}
 
-{% block content %}
     <!-- breadcrumb area start -->
     <div class="breadcrumb-area">
         <div class="container">
@@ -144,8 +142,8 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="single-input-item">
-                                            <label for="{{ billing_form.first_name.id_for_label }}" class="required">First Name</label>
-                                            {{ billing_form.first_name }}
+                                            <label for="id_billing-first_name" class="required">First Name</label>
+                                            <input type="text" name="billing-first_name" id="id_billing-first_name" class="form-control" required>
                                             {% if billing_form.first_name.errors %}
                                                 <div class="invalid-feedback">{{ billing_form.first_name.errors.0 }}</div>
                                             {% endif %}
@@ -153,8 +151,8 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="single-input-item">
-                                            <label for="{{ billing_form.last_name.id_for_label }}" class="required">Last Name</label>
-                                            {{ billing_form.last_name }}
+                                            <label for="id_billing-last_name" class="required">Last Name</label>
+                                            <input type="text" name="billing-last_name" id="id_billing-last_name" class="form-control" required>
                                             {% if billing_form.last_name.errors %}
                                                 <div class="invalid-feedback">{{ billing_form.last_name.errors.0 }}</div>
                                             {% endif %}
@@ -163,71 +161,77 @@
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.email.id_for_label }}" class="required">Email Address</label>
-                                    {{ billing_form.email }}
+                                    <label for="id_billing-email" class="required">Email Address</label>
+                                    <input type="email" name="billing-email" id="id_billing-email" class="form-control" required>
                                     {% if billing_form.email.errors %}
                                         <div class="invalid-feedback">{{ billing_form.email.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.company.id_for_label }}">Company Name</label>
-                                    {{ billing_form.company }}
+                                    <label for="id_billing-company">Company Name</label>
+                                    <input type="text" name="billing-company" id="id_billing-company" class="form-control">
                                     {% if billing_form.company.errors %}
                                         <div class="invalid-feedback">{{ billing_form.company.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.country.id_for_label }}" class="required">Country</label>
-                                    {{ billing_form.country }}
+                                    <label for="id_billing-country" class="required">Country</label>
+                                    <select name="billing-country" id="id_billing-country" class="form-control" required>
+                                        <option value="">Select Country</option>
+                                        <option value="KE">Kenya</option>
+                                        <option value="US">United States</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="CA">Canada</option>
+                                    </select>
                                     {% if billing_form.country.errors %}
                                         <div class="invalid-feedback">{{ billing_form.country.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.address_line_1.id_for_label }}" class="required pt-20">Street address</label>
-                                    {{ billing_form.address_line_1 }}
+                                    <label for="id_billing-address_line_1" class="required pt-20">Street address</label>
+                                    <input type="text" name="billing-address_line_1" id="id_billing-address_line_1" placeholder="House number and street name" class="form-control" required>
                                     {% if billing_form.address_line_1.errors %}
                                         <div class="invalid-feedback">{{ billing_form.address_line_1.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    {{ billing_form.address_line_2 }}
+                                    <input type="text" name="billing-address_line_2" id="id_billing-address_line_2" placeholder="Apartment, suite, unit etc. (optional)" class="form-control">
                                     {% if billing_form.address_line_2.errors %}
                                         <div class="invalid-feedback">{{ billing_form.address_line_2.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.city.id_for_label }}" class="required">Town / City</label>
-                                    {{ billing_form.city }}
+                                    <label for="id_billing-city" class="required">Town / City</label>
+                                    <input type="text" name="billing-city" id="id_billing-city" class="form-control" required>
                                     {% if billing_form.city.errors %}
                                         <div class="invalid-feedback">{{ billing_form.city.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.state.id_for_label }}">State / Division</label>
-                                    {{ billing_form.state }}
+                                    <label for="id_billing-state">State / Division</label>
+                                    <input type="text" name="billing-state" id="id_billing-state" class="form-control">
                                     {% if billing_form.state.errors %}
                                         <div class="invalid-feedback">{{ billing_form.state.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.postal_code.id_for_label }}" class="required">Postcode / ZIP</label>
-                                    {{ billing_form.postal_code }}
+                                    <label for="id_billing-postal_code" class="required">Postcode / ZIP</label>
+                                    <input type="text" name="billing-postal_code" id="id_billing-postal_code" class="form-control" required>
                                     {% if billing_form.postal_code.errors %}
                                         <div class="invalid-feedback">{{ billing_form.postal_code.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="single-input-item">
-                                    <label for="{{ billing_form.phone.id_for_label }}">Phone</label>
-                                    {{ billing_form.phone }}
+                                    <label for="id_billing-phone" class="required">Phone</label>
+                                    <input type="tel" name="billing-phone" id="id_billing-phone" placeholder="+254712345678" class="form-control" required>
                                     {% if billing_form.phone.errors %}
                                         <div class="invalid-feedback">{{ billing_form.phone.errors.0 }}</div>
                                     {% endif %}
@@ -262,8 +266,8 @@
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="single-input-item">
-                                                    <label for="{{ shipping_form.first_name.id_for_label }}" class="required">First Name</label>
-                                                    {{ shipping_form.first_name }}
+                                                    <label for="id_shipping-first_name" class="required">First Name</label>
+                                                    <input type="text" name="shipping-first_name" id="id_shipping-first_name" class="form-control">
                                                     {% if shipping_form.first_name.errors %}
                                                         <div class="invalid-feedback">{{ shipping_form.first_name.errors.0 }}</div>
                                                     {% endif %}
@@ -271,15 +275,54 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="single-input-item">
-                                                    <label for="{{ shipping_form.last_name.id_for_label }}" class="required">Last Name</label>
-                                                    {{ shipping_form.last_name }}
+                                                    <label for="id_shipping-last_name" class="required">Last Name</label>
+                                                    <input type="text" name="shipping-last_name" id="id_shipping-last_name" class="form-control">
                                                     {% if shipping_form.last_name.errors %}
                                                         <div class="invalid-feedback">{{ shipping_form.last_name.errors.0 }}</div>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                         </div>
-                                        <!-- Add other shipping fields similarly -->
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-company">Company Name</label>
+                                            <input type="text" name="shipping-company" id="id_shipping-company" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-country" class="required">Country</label>
+                                            <select name="shipping-country" id="id_shipping-country" class="form-control">
+                                                <option value="">Select Country</option>
+                                                <option value="KE">Kenya</option>
+                                                <option value="US">United States</option>
+                                                <option value="GB">United Kingdom</option>
+                                                <option value="CA">Canada</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-address_line_1" class="required">Street address</label>
+                                            <input type="text" name="shipping-address_line_1" id="id_shipping-address_line_1" placeholder="House number and street name" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <input type="text" name="shipping-address_line_2" id="id_shipping-address_line_2" placeholder="Apartment, suite, unit etc. (optional)" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-city" class="required">Town / City</label>
+                                            <input type="text" name="shipping-city" id="id_shipping-city" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-state">State / Division</label>
+                                            <input type="text" name="shipping-state" id="id_shipping-state" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-postal_code" class="required">Postcode / ZIP</label>
+                                            <input type="text" name="shipping-postal_code" id="id_shipping-postal_code" class="form-control">
+                                        </div>
                                     </div>
                                 </div>
 
@@ -423,13 +466,12 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="retry-payment" style="display: none;">Retry Payment</button>
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Check if jQuery is loaded, if not, use vanilla JavaScript

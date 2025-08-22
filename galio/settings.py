@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,6 +16,12 @@ SECRET_KEY = 'django-insecure-61om=gjx*)h-0o78d7qfgbxf3p@z4s&ozrl1rn2^2dhwv)od$=
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://ce564ecf696c.ngrok-free.app",
+]
 
 
 # Application definition
@@ -118,6 +125,40 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')    # For collectstatic in pr
 # Media files (Uploaded content)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# M-Pesa Configuration
+
+MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY")
+MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET")
+MPESA_BUSINESS_SHORTCODE = config("MPESA_BUSINESS_SHORTCODE")
+MPESA_PASSKEY = config("MPESA_PASSKEY")
+MPESA_ENVIRONMENT = config("MPESA_ENVIRONMENT", default="sandbox")
+MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL")
+
+
+# Add logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'mpesa.log',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'your_app_name.views': {  # Replace with your actual app name
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

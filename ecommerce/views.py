@@ -671,8 +671,6 @@ def apply_coupon(request):
         # You might want to store the coupon in the session
         return redirect('cart')
     return redirect('cart')
-
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -691,15 +689,20 @@ import base64
 import json
 from datetime import datetime
 import uuid
+import logging
 
 from .models import Cart, CartItem, Order, OrderItem, Address, Coupon, User
 from .forms import CheckoutForm, BillingAddressForm, ShippingAddressForm
 
+# Set up logging for M-Pesa debugging
+logger = logging.getLogger(__name__)
 
 class CheckoutView(View):
     template_name = 'checkout.html'
     
     def get(self, request):
+        logger.info(f"CheckoutView GET request from user: {request.user}")
+        
         # Get or create cart
         cart = self.get_cart(request)
         
@@ -731,9 +734,13 @@ class CheckoutView(View):
         return render(request, self.template_name, context)
     
     def post(self, request):
+        logger.info(f"CheckoutView POST request from user: {request.user}")
+        logger.debug(f"POST data: {request.POST}")
+        
         cart = self.get_cart(request)
         
         if not cart or not cart.items.exists():
+            logger.error("Cart is empty during checkout")
             messages.error(request, 'Your cart is empty.')
             return redirect('cart')
         
@@ -743,11 +750,17 @@ class CheckoutView(View):
         ship_to_different = request.POST.get('ship_to_different') == 'on'
         shipping_form = ShippingAddressForm(request.POST, prefix='shipping') if ship_to_different else None
         
+        logger.info(f"Ship to different address: {ship_to_different}")
+        logger.info(f"Billing form valid: {billing_form.is_valid()}")
+        if shipping_form:
+            logger.info(f"Shipping form valid: {shipping_form.is_valid()}")
+        
         if billing_form.is_valid() and (not shipping_form or shipping_form.is_valid()):
             try:
                 with transaction.atomic():
                     # Create or get user
                     user = self.get_or_create_user(request, billing_form.cleaned_data)
+                    logger.info(f"User for order: {user}")
                     
                     # Calculate amounts
                     subtotal = cart.total_price
@@ -755,6 +768,8 @@ class CheckoutView(View):
                     tax_amount = self.calculate_tax(cart)
                     discount_amount = self.apply_coupon(request, subtotal)
                     total_amount = subtotal + shipping_cost + tax_amount - discount_amount
+                    
+                    logger.info(f"Order amounts - Subtotal: {subtotal}, Shipping: {shipping_cost}, Tax: {tax_amount}, Discount: {discount_amount}, Total: {total_amount}")
                     
                     # Create order
                     order = Order.objects.create(
@@ -768,6 +783,8 @@ class CheckoutView(View):
                         shipping_address=self.format_address(shipping_form.cleaned_data if shipping_form else billing_form.cleaned_data),
                         payment_method=request.POST.get('paymentmethod', 'mpesa'),
                     )
+                    
+                    logger.info(f"Order created: {order.order_number}")
                     
                     # Create order items
                     for cart_item in cart.items.all():
@@ -788,24 +805,38 @@ class CheckoutView(View):
                             cart_item.product.stock_quantity -= cart_item.quantity
                             cart_item.product.save()
                     
+                    logger.info("Order items created and stock updated")
+                    
                     # Handle payment
                     payment_method = request.POST.get('paymentmethod', 'mpesa')
+                    logger.info(f"Payment method: {payment_method}")
                     
                     if payment_method == 'mpesa':
                         phone_number = self.clean_phone_number(billing_form.cleaned_data.get('phone'))
+                        logger.info(f"Cleaned phone number: {phone_number}")
+                        
                         if phone_number:
                             return self.initiate_mpesa_payment(request, order, phone_number)
                         else:
+                            logger.error("Invalid phone number for M-Pesa payment")
                             messages.error(request, 'Valid phone number is required for M-Pesa payment.')
+                            order.delete()  # Clean up order
                             return self.get(request)
                     else:
                         # Handle other payment methods
+                        logger.info(f"Non-M-Pesa payment method: {payment_method}")
                         return redirect('order_confirmation', order_number=order.order_number)
                         
             except Exception as e:
+                logger.exception(f"Error during checkout: {str(e)}")
                 messages.error(request, f'An error occurred while processing your order: {str(e)}')
                 return self.get(request)
         else:
+            logger.error("Form validation failed")
+            if billing_form.errors:
+                logger.error(f"Billing form errors: {billing_form.errors}")
+            if shipping_form and shipping_form.errors:
+                logger.error(f"Shipping form errors: {shipping_form.errors}")
             messages.error(request, 'Please correct the errors below.')
             
         context = {
@@ -852,9 +883,23 @@ class CheckoutView(View):
             )
             return user
         
-        # For guest checkout, you might want to create a guest user or handle differently
-        # For now, we'll require authentication
-        return request.user
+        # For guest checkout, create a temporary user or handle differently
+        # You might want to allow guest orders here
+        email = form_data.get('email')
+        if email and not User.objects.filter(email=email).exists():
+            # Create a guest user (you might want to mark this differently)
+            user = User.objects.create_user(
+                username=f"guest_{uuid.uuid4().hex[:8]}",
+                email=email,
+                first_name=form_data.get('first_name', ''),
+                last_name=form_data.get('last_name', ''),
+                is_active=False  # Mark as guest user
+            )
+            return user
+        elif email and User.objects.filter(email=email).exists():
+            return User.objects.get(email=email)
+        
+        raise ValueError("Cannot create user - insufficient data")
     
     def format_address(self, address_data):
         return f"{address_data.get('first_name', '')} {address_data.get('last_name', '')}\n" \
@@ -866,11 +911,9 @@ class CheckoutView(View):
                f"Phone: {address_data.get('phone', '')}"
     
     def calculate_shipping(self, cart):
-        # Implement your shipping calculation logic
         return Decimal('70.00')  # Flat rate for now
     
     def calculate_tax(self, cart):
-        # Implement your tax calculation logic
         tax_rate = Decimal('0.16')  # 16% VAT in Kenya
         return cart.total_price * tax_rate
     
@@ -905,16 +948,18 @@ class CheckoutView(View):
         return Decimal('0.00')
     
     def apply_coupon_amount(self, cart):
-        # This is a simplified version, you should integrate with session
         return Decimal('0.00')
     
     def clean_phone_number(self, phone):
         """Clean and format phone number for M-Pesa"""
+        logger.info(f"Cleaning phone number: {phone}")
+        
         if not phone:
             return None
         
         # Remove all non-digit characters
-        phone = ''.join(filter(str.isdigit, phone))
+        phone = ''.join(filter(str.isdigit, str(phone)))
+        logger.debug(f"Phone after removing non-digits: {phone}")
         
         # Handle Kenyan phone numbers
         if phone.startswith('0'):
@@ -926,14 +971,20 @@ class CheckoutView(View):
         elif len(phone) == 9:
             phone = '254' + phone
         
+        logger.debug(f"Phone after formatting: {phone}")
+        
         # Validate length
         if len(phone) == 12 and phone.startswith('254'):
+            logger.info(f"Valid phone number: {phone}")
             return phone
         
+        logger.error(f"Invalid phone number format: {phone}")
         return None
     
     def initiate_mpesa_payment(self, request, order, phone_number):
         """Initiate M-Pesa STK Push"""
+        logger.info(f"Initiating M-Pesa payment for order {order.order_number}, phone: {phone_number}, amount: {order.total_amount}")
+        
         try:
             mpesa_service = MpesaService()
             response = mpesa_service.stk_push(
@@ -943,44 +994,83 @@ class CheckoutView(View):
                 transaction_desc=f"Payment for order {order.order_number}"
             )
             
+            logger.info(f"M-Pesa STK Push response: {response}")
+            
             if response.get('ResponseCode') == '0':
                 # Store checkout request ID for later verification
-                request.session['checkout_request_id'] = response.get('CheckoutRequestID')
+                checkout_request_id = response.get('CheckoutRequestID')
+                request.session['checkout_request_id'] = checkout_request_id
                 request.session['order_id'] = order.id
                 
-                return JsonResponse({
-                    'success': True,
-                    'message': 'STK Push sent to your phone. Please enter your M-Pesa PIN.',
-                    'checkout_request_id': response.get('CheckoutRequestID')
-                })
+                logger.info(f"STK Push successful. CheckoutRequestID: {checkout_request_id}")
+                
+                # Check if this is an AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'STK Push sent to your phone. Please enter your M-Pesa PIN.',
+                        'checkout_request_id': checkout_request_id,
+                        'order_number': order.order_number
+                    })
+                else:
+                    messages.success(request, 'STK Push sent to your phone. Please enter your M-Pesa PIN.')
+                    return redirect('order_confirmation', order_number=order.order_number)
             else:
-                messages.error(request, f"M-Pesa payment failed: {response.get('ResponseDescription', 'Unknown error')}")
+                error_msg = response.get('ResponseDescription', 'Unknown error')
+                logger.error(f"STK Push failed: {error_msg}")
+                messages.error(request, f"M-Pesa payment failed: {error_msg}")
                 order.delete()  # Clean up failed order
-                return self.get(request)
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"M-Pesa payment failed: {error_msg}"
+                    })
+                else:
+                    return self.get(request)
                 
         except Exception as e:
+            logger.exception(f"M-Pesa payment initialization failed: {str(e)}")
             messages.error(request, f"Payment initialization failed: {str(e)}")
             order.delete()
-            return self.get(request)
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Payment initialization failed: {str(e)}"
+                })
+            else:
+                return self.get(request)
 
 
 class MpesaService:
     def __init__(self):
-        self.consumer_key = settings.MPESA_CONSUMER_KEY
-        self.consumer_secret = settings.MPESA_CONSUMER_SECRET
-        self.business_shortcode = settings.MPESA_BUSINESS_SHORTCODE
-        self.passkey = settings.MPESA_PASSKEY
-        self.environment = settings.MPESA_ENVIRONMENT  # 'sandbox' or 'production'
+        self.consumer_key = getattr(settings, 'MPESA_CONSUMER_KEY', '')
+        self.consumer_secret = getattr(settings, 'MPESA_CONSUMER_SECRET', '')
+        self.business_shortcode = getattr(settings, 'MPESA_BUSINESS_SHORTCODE', '')
+        self.passkey = getattr(settings, 'MPESA_PASSKEY', '')
+        self.environment = getattr(settings, 'MPESA_ENVIRONMENT', 'sandbox')
+        
+        logger.info(f"M-Pesa Service initialized - Environment: {self.environment}, Shortcode: {self.business_shortcode}")
+        
+        if not all([self.consumer_key, self.consumer_secret, self.business_shortcode, self.passkey]):
+            logger.error("Missing M-Pesa configuration in settings")
+            raise ValueError("M-Pesa configuration is incomplete. Check your settings.")
         
         if self.environment == 'sandbox':
             self.base_url = 'https://sandbox.safaricom.co.ke'
         else:
             self.base_url = 'https://api.safaricom.co.ke'
+        
+        logger.info(f"M-Pesa base URL: {self.base_url}")
     
     def get_access_token(self):
         """Get M-Pesa access token"""
+        logger.info("Requesting M-Pesa access token")
+        
         try:
             url = f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials"
+            logger.debug(f"Token URL: {url}")
             
             # Create credentials string
             credentials = f"{self.consumer_key}:{self.consumer_secret}"
@@ -991,12 +1081,22 @@ class MpesaService:
                 'Content-Type': 'application/json'
             }
             
-            response = requests.get(url, headers=headers)
+            logger.debug(f"Token request headers: {headers}")
+            
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             
-            return response.json().get('access_token')
+            token_data = response.json()
+            logger.info("Access token obtained successfully")
+            logger.debug(f"Token response: {token_data}")
+            
+            return token_data.get('access_token')
             
         except requests.exceptions.RequestException as e:
+            logger.exception(f"Failed to get access token: {str(e)}")
+            raise Exception(f"Failed to get access token: {str(e)}")
+        except Exception as e:
+            logger.exception(f"Unexpected error getting access token: {str(e)}")
             raise Exception(f"Failed to get access token: {str(e)}")
     
     def generate_password(self):
@@ -1004,15 +1104,22 @@ class MpesaService:
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         password_string = f"{self.business_shortcode}{self.passkey}{timestamp}"
         password = base64.b64encode(password_string.encode()).decode()
+        
+        logger.debug(f"Generated timestamp: {timestamp}")
+        logger.debug(f"Password string: {password_string}")
+        
         return password, timestamp
     
     def stk_push(self, phone_number, amount, account_reference, transaction_desc):
         """Initiate STK Push"""
+        logger.info(f"Starting STK Push - Phone: {phone_number}, Amount: {amount}, Reference: {account_reference}")
+        
         try:
             access_token = self.get_access_token()
             password, timestamp = self.generate_password()
             
             url = f"{self.base_url}/mpesa/stkpush/v1/processrequest"
+            logger.debug(f"STK Push URL: {url}")
             
             headers = {
                 'Authorization': f'Bearer {access_token}',
@@ -1028,17 +1135,26 @@ class MpesaService:
                 'PartyA': phone_number,
                 'PartyB': self.business_shortcode,
                 'PhoneNumber': phone_number,
-                'CallBackURL': settings.MPESA_CALLBACK_URL,
+                'CallBackURL': getattr(settings, 'MPESA_CALLBACK_URL', ''),
                 'AccountReference': account_reference,
                 'TransactionDesc': transaction_desc
             }
             
-            response = requests.post(url, headers=headers, json=payload)
+            logger.info(f"STK Push payload: {payload}")
+            
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             
-            return response.json()
+            response_data = response.json()
+            logger.info(f"STK Push response: {response_data}")
+            
+            return response_data
             
         except requests.exceptions.RequestException as e:
+            logger.exception(f"STK Push request failed: {str(e)}")
+            raise Exception(f"STK Push failed: {str(e)}")
+        except Exception as e:
+            logger.exception(f"STK Push unexpected error: {str(e)}")
             raise Exception(f"STK Push failed: {str(e)}")
 
 
@@ -1046,15 +1162,24 @@ class MpesaService:
 @require_POST
 def mpesa_callback(request):
     """Handle M-Pesa callback"""
+    logger.info("M-Pesa callback received")
+    logger.debug(f"Callback request body: {request.body}")
+    
     try:
         callback_data = json.loads(request.body)
+        logger.info(f"Parsed callback data: {callback_data}")
         
         # Extract relevant data
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
         result_code = stk_callback.get('ResultCode')
         checkout_request_id = stk_callback.get('CheckoutRequestID')
+        result_desc = stk_callback.get('ResultDesc')
+        
+        logger.info(f"Callback details - ResultCode: {result_code}, CheckoutRequestID: {checkout_request_id}, ResultDesc: {result_desc}")
         
         if result_code == 0:  # Success
+            logger.info("Payment successful")
+            
             # Extract transaction details
             callback_metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
             transaction_data = {}
@@ -1064,33 +1189,31 @@ def mpesa_callback(request):
                 value = item.get('Value')
                 transaction_data[name] = value
             
-            # Find the order using checkout_request_id
-            # You might need to store this mapping in a model or cache
-            try:
-                # Update order status
-                # This is a simplified approach - you should implement proper order tracking
-                mpesa_receipt_number = transaction_data.get('MpesaReceiptNumber')
-                transaction_date = transaction_data.get('TransactionDate')
-                phone_number = transaction_data.get('PhoneNumber')
-                
-                # Update order payment status
-                # You'll need to implement a way to link checkout_request_id to order
-                # For now, this is a placeholder
-                
-                return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
-                
-            except Exception as e:
-                return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Failed to process: {str(e)}'})
-        else:
-            # Payment failed
-            result_desc = stk_callback.get('ResultDesc')
+            logger.info(f"Transaction data: {transaction_data}")
+            
+            mpesa_receipt_number = transaction_data.get('MpesaReceiptNumber')
+            transaction_date = transaction_data.get('TransactionDate')
+            phone_number = transaction_data.get('PhoneNumber')
+            
+            # You'll need to implement order update logic here
+            # For now, just log the successful payment
+            logger.info(f"Payment completed - Receipt: {mpesa_receipt_number}, Date: {transaction_date}, Phone: {phone_number}")
+            
             return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
             
+        else:
+            # Payment failed
+            logger.error(f"Payment failed - ResultCode: {result_code}, ResultDesc: {result_desc}")
+            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+            
+    except json.JSONDecodeError as e:
+        logger.exception(f"JSON decode error in callback: {str(e)}")
+        return JsonResponse({'ResultCode': 1, 'ResultDesc': f'JSON decode error: {str(e)}'})
     except Exception as e:
+        logger.exception(f"Error processing callback: {str(e)}")
         return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Error processing callback: {str(e)}'})
 
 
-@login_required
 def apply_coupon(request):
     """Apply coupon code"""
     if request.method == 'POST':
@@ -1108,7 +1231,7 @@ def apply_coupon(request):
                 
                 # Check minimum amount
                 if coupon.minimum_amount and cart.total_price < coupon.minimum_amount:
-                    messages.error(request, f'Minimum order amount of ${coupon.minimum_amount} required for this coupon.')
+                    messages.error(request, f'Minimum order amount of {coupon.minimum_amount} required for this coupon.')
                     return redirect('checkout')
                 
                 # Store coupon in session
@@ -1123,7 +1246,6 @@ def apply_coupon(request):
     return redirect('checkout')
 
 
-@login_required
 def remove_coupon(request):
     """Remove applied coupon"""
     if 'coupon_code' in request.session:
@@ -1136,24 +1258,31 @@ def remove_coupon(request):
 def check_payment_status(request):
     """Check M-Pesa payment status"""
     checkout_request_id = request.GET.get('checkout_request_id')
+    logger.info(f"Checking payment status for CheckoutRequestID: {checkout_request_id}")
     
     if not checkout_request_id:
         return JsonResponse({'error': 'Checkout request ID required'}, status=400)
     
     try:
-        mpesa_service = MpesaService()
-        # Implement query status if needed
-        # For now, return a placeholder response
+        # Here you would typically query your database to check payment status
+        # based on the checkout_request_id stored during the STK push
+        
+        # For now, return a pending status
+        # You should implement proper status tracking in your database
+        
         return JsonResponse({
             'status': 'pending',
             'message': 'Payment is being processed...'
         })
     except Exception as e:
+        logger.exception(f"Error checking payment status: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def order_confirmation(request, order_number):
     """Order confirmation page"""
+    logger.info(f"Order confirmation for order: {order_number}")
+    
     order = get_object_or_404(Order, order_number=order_number)
     
     # Clear cart after successful order
@@ -1169,7 +1298,6 @@ def order_confirmation(request, order_number):
     }
     
     return render(request, 'order_confirmation.html', context)
-
 
 # views.py
 from django.shortcuts import render
