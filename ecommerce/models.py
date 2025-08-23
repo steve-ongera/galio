@@ -23,7 +23,36 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
-
+class County(models.Model):
+    """Kenyan Counties"""
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=10, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name_plural = 'Counties'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+class DeliveryArea(models.Model):
+    """Delivery areas within counties with shipping fees"""
+    name = models.CharField(max_length=100)
+    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name='areas')
+    shipping_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    delivery_days = models.IntegerField(default=1)  # Expected delivery days
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['name', 'county']
+        ordering = ['county__name', 'name']
+    
+    def __str__(self):
+        return f"{self.name}, {self.county.name}"
+    
 class Address(models.Model):
     """User addresses for shipping and billing"""
     ADDRESS_TYPES = (
