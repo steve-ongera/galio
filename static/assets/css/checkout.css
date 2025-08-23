@@ -1,0 +1,123 @@
+.invalid-feedback {
+            display: block;
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+        .form-control.is-invalid {
+            border-color: #dc3545;
+        }
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+        .breadcrumb-area {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+        }
+        .checkout-page-wrapper {
+            padding: 40px 0;
+        }
+        .checkoutaccordion .card {
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .checkoutaccordion h3 {
+            padding: 15px 20px;
+            margin: 0;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .checkoutaccordion h3 span {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .single-input-item {
+            margin-bottom: 20px;
+        }
+        .single-input-item label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .required::after {
+            content: " *";
+            color: #dc3545;
+        }
+        .check-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .check-btn:hover {
+            background-color: #0056b3;
+        }
+        .order-summary-details {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        .payment-method-details {
+            padding: 15px;
+            background-color: #f8f9fa;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-dialog {
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .modal-header, .modal-footer {
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .modal-footer {
+            border-top: 1px solid #dee2e6;
+            border-bottom: none;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        /* Fix for disabled select styling */
+        select:disabled {
+            background-color: #e9ecef;
+            opacity: 1;
+        }
+        select:not(:disabled) {
+            background-color: white;
+        }
+        /* Debug styles */
+        .debug-info {
+            background: #f0f8ff;
+            border: 1px solid #0066cc;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #0066cc;
+        }

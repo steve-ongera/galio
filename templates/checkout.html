@@ -1,556 +1,461 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+    {% load static %}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="meta description">
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .invalid-feedback {
-            display: block;
-            color: #dc3545;
-            font-size: 0.875em;
-            margin-top: 0.25rem;
-        }
-        .form-control.is-invalid {
-            border-color: #dc3545;
-        }
-        .spinner-border {
-            width: 2rem;
-            height: 2rem;
-        }
-        .breadcrumb-area {
-            background-color: #f8f9fa;
-            padding: 20px 0;
-        }
-        .checkout-page-wrapper {
-            padding: 40px 0;
-        }
-        .checkoutaccordion .card {
-            margin-bottom: 20px;
-            border: 1px solid #dee2e6;
-        }
-        .checkoutaccordion h3 {
-            padding: 15px 20px;
-            margin: 0;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .checkoutaccordion h3 span {
-            color: #007bff;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        .single-input-item {
-            margin-bottom: 20px;
-        }
-        .single-input-item label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .required::after {
-            content: " *";
-            color: #dc3545;
-        }
-        .check-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .check-btn:hover {
-            background-color: #0056b3;
-        }
-        .order-summary-details {
-            background-color: #f8f9fa;
-            padding: 30px;
-            border-radius: 8px;
-        }
-        .payment-method-details {
-            padding: 15px;
-            background-color: #f8f9fa;
-            margin-top: 10px;
-            border-radius: 4px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1050;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-dialog {
-            max-width: 500px;
-            width: 90%;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .modal-header, .modal-footer {
-            padding: 15px 20px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .modal-footer {
-            border-top: 1px solid #dee2e6;
-            border-bottom: none;
-        }
-        .modal-body {
-            padding: 20px;
-        }
-        /* Fix for disabled select styling */
-        select:disabled {
-            background-color: #e9ecef;
-            opacity: 1;
-        }
-        select:not(:disabled) {
-            background-color: white;
-        }
-        /* Debug styles */
-        .debug-info {
-            background: #f0f8ff;
-            border: 1px solid #0066cc;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #0066cc;
-        }
-    </style>
-    <!-- breadcrumb area start -->
-    <div class="breadcrumb-area">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <div class="breadcrumb-wrap">
-                        <nav aria-label="breadcrumb">
-                            <ul class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Checkout</li>
-                            </ul>
-                        </nav>
+    <!-- Site title -->
+    <title>{% block title %}checkout{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{% static 'assets/img/logo/logo2.png' %}" type="image/x-icon" />
+
+    <!-- CSS Files -->
+    <link href="{% static 'assets/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/helper.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/plugins.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/skin-default.css' %}" rel="stylesheet" id="galio-skin">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    
+
+    <div class="wrapper">
+        <!-- header area start -->
+        <header>
+            {% include 'partials/header.html' %}
+        </header>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/css/bootstrap.min.css" rel="stylesheet">
+        
+            <!-- breadcrumb area start -->
+            <div class="breadcrumb-area">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="breadcrumb-wrap">
+                                <nav aria-label="breadcrumb">
+                                    <ul class="breadcrumb">
+                                        <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                                        <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
+                                        <li class="breadcrumb-item active" aria-current="page">Checkout</li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <!-- breadcrumb area end -->
+            <!-- breadcrumb area end -->
 
-    <!-- checkout main wrapper start -->
-    <div class="checkout-page-wrapper">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <!-- Display Messages -->
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+            <!-- checkout main wrapper start -->
+            <div class="checkout-page-wrapper">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- Display Messages -->
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
 
-                    <!-- Debug Info (remove in production) -->
-                    <div class="debug-info" id="debug-info" style="display: none;">
-                        <strong>Debug Info:</strong>
-                        <div id="debug-content"></div>
-                    </div>
+                        
 
-                    <!-- Checkout Login Coupon Accordion Start -->
-                    <div class="checkoutaccordion" id="checkOutAccordion">
-                        {% if not user.is_authenticated %}
-                        <div class="card">
-                            <h3>Returning Customer? <span data-toggle="collapse" data-target="#logInaccordion">Click Here To Login</span></h3>
-                            <div id="logInaccordion" class="collapse" data-parent="#checkOutAccordion">
-                                <div class="card-body">
-                                    <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new customer, please proceed to the Billing &amp; Shipping section.</p>
-                                    <div class="login-reg-form-wrap mt-20">
-                                        <div class="row">
-                                            <div class="col-lg-7 m-auto">
-                                                <form action="{% url 'login' %}" method="post">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="next" value="{% url 'checkout' %}">
-                                                    <div class="row">
-                                                        <div class="col-md-12">
-                                                            <div class="single-input-item">
-                                                                <input type="email" name="email" placeholder="Enter your Email" required />
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-12">
-                                                            <div class="single-input-item">
-                                                                <input type="password" name="password" placeholder="Enter your Password" required />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="single-input-item">
-                                                        <div class="login-reg-form-meta d-flex align-items-center justify-content-between">
-                                                            <div class="remember-meta">
-                                                                <div class="custom-control custom-checkbox">
-                                                                    <input type="checkbox" class="custom-control-input" id="rememberMe" name="rememberMe" />
-                                                                    <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                            <!-- Checkout Login Coupon Accordion Start -->
+                            <div class="checkoutaccordion" id="checkOutAccordion">
+                                {% if not user.is_authenticated %}
+                                <div class="card">
+                                    <h3>Returning Customer? <span data-toggle="collapse" data-target="#logInaccordion">Click Here To Login</span></h3>
+                                    <div id="logInaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                        <div class="card-body">
+                                            <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new customer, please proceed to the Billing &amp; Shipping section.</p>
+                                            <div class="login-reg-form-wrap mt-20">
+                                                <div class="row">
+                                                    <div class="col-lg-7 m-auto">
+                                                        <form action="{% url 'login' %}" method="post">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="next" value="{% url 'checkout' %}">
+                                                            <div class="row">
+                                                                <div class="col-md-12">
+                                                                    <div class="single-input-item">
+                                                                        <input type="email" name="email" placeholder="Enter your Email" required />
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    <div class="single-input-item">
+                                                                        <input type="password" name="password" placeholder="Enter your Password" required />
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <a href="{% url 'password_reset' %}" class="forget-pwd">Forget Password?</a>
-                                                        </div>
+                                                            <div class="single-input-item">
+                                                                <div class="login-reg-form-meta d-flex align-items-center justify-content-between">
+                                                                    <div class="remember-meta">
+                                                                        <div class="custom-control custom-checkbox">
+                                                                            <input type="checkbox" class="custom-control-input" id="rememberMe" name="rememberMe" />
+                                                                            <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <a href="{% url 'password_reset' %}" class="forget-pwd">Forget Password?</a>
+                                                                </div>
+                                                            </div>
+                                                            <div class="single-input-item">
+                                                                <button type="submit" class="check-btn sqr-btn">Login</button>
+                                                            </div>
+                                                        </form>
                                                     </div>
-                                                    <div class="single-input-item">
-                                                        <button type="submit" class="check-btn sqr-btn">Login</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <div class="card">
-                            <h3>Have A Coupon? <span data-toggle="collapse" data-target="#couponaccordion">Click Here To Enter Your Code</span></h3>
-                            <div id="couponaccordion" class="collapse" data-parent="#checkOutAccordion">
-                                <div class="card-body">
-                                    <div class="cart-update-option">
-                                        <div class="apply-coupon-wrapper">
-                                            <form action="{% url 'apply_coupon' %}" method="post" class="d-block d-md-flex">
-                                                {% csrf_token %}
-                                                <input type="text" name="coupon_code" placeholder="Enter Your Coupon Code" required />
-                                                <button type="submit" class="check-btn sqr-btn">Apply Coupon</button>
-                                            </form>
-                                            {% if request.session.coupon_code %}
-                                                <div class="mt-2">
-                                                    <span class="badge badge-success">Coupon "{{ request.session.coupon_code }}" applied</span>
-                                                    <a href="{% url 'remove_coupon' %}" class="btn btn-sm btn-outline-danger ml-2">Remove</a>
                                                 </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Checkout Login Coupon Accordion End -->
-                </div>
-            </div>
-
-            <form method="post" id="checkout-form" novalidate>
-                {% csrf_token %}
-                <div class="row">
-                    <!-- Checkout Billing Details -->
-                    <div class="col-lg-6">
-                        <div class="checkout-billing-details-wrap">
-                            <h2>Billing Details</h2>
-                            <div class="billing-form-wrap">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="single-input-item">
-                                            <label for="id_billing-first_name" class="required">First Name</label>
-                                            <input type="text" name="billing-first_name" id="id_billing-first_name" class="form-control" required>
-                                            {% if billing_form.first_name.errors %}
-                                                <div class="invalid-feedback">{{ billing_form.first_name.errors.0 }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="single-input-item">
-                                            <label for="id_billing-last_name" class="required">Last Name</label>
-                                            <input type="text" name="billing-last_name" id="id_billing-last_name" class="form-control" required>
-                                            {% if billing_form.last_name.errors %}
-                                                <div class="invalid-feedback">{{ billing_form.last_name.errors.0 }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="id_billing-email" class="required">Email Address</label>
-                                    <input type="email" name="billing-email" id="id_billing-email" class="form-control" required>
-                                    {% if billing_form.email.errors %}
-                                        <div class="invalid-feedback">{{ billing_form.email.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="id_billing-phone" class="required">Phone</label>
-                                    <input type="tel" name="billing-phone" id="id_billing-phone" placeholder="+254712345678" class="form-control" required>
-                                    <small class="form-text text-muted">Required for delivery coordination</small>
-                                    {% if billing_form.phone.errors %}
-                                        <div class="invalid-feedback">{{ billing_form.phone.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="id_billing-county" class="required">County</label>
-                                    <select name="billing-county" id="id_billing-county" class="form-control county-select" required>
-                                        <option value="">Select County</option>
-                                        {% for county in counties %}
-                                            <option value="{{ county.id }}">{{ county.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    {% if billing_form.county.errors %}
-                                        <div class="invalid-feedback">{{ billing_form.county.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="id_billing-delivery_area" class="required">Delivery Area</label>
-                                    <select name="billing-delivery_area" id="id_billing-delivery_area" class="form-control area-select" required>
-                                        <option value="">Select County First</option>
-                                    </select>
-                                    <small class="form-text text-muted">Shipping fee will be calculated based on your area</small>
-                                    {% if billing_form.delivery_area.errors %}
-                                        <div class="invalid-feedback">{{ billing_form.delivery_area.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="id_billing-detailed_address" class="required">Detailed Address</label>
-                                    <textarea name="billing-detailed_address" id="id_billing-detailed_address" class="form-control" rows="3" 
-                                        placeholder="Building name, floor, apartment number, landmarks...&#10;Example: ABC Apartments, 2nd Floor, House No. 5B, Near Shell Petrol Station" required></textarea>
-                                    <small class="form-text text-muted">Please provide specific details to help our delivery team find you</small>
-                                    {% if billing_form.detailed_address.errors %}
-                                        <div class="invalid-feedback">{{ billing_form.detailed_address.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                {% if not user.is_authenticated %}
-                                <div class="checkout-box-wrap">
-                                    <div class="single-input-item">
-                                        <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input" id="create_pwd" name="create_pwd">
-                                            <label class="custom-control-label" for="create_pwd">Create an account?</label>
-                                        </div>
-                                    </div>
-                                    <div class="account-create single-form-row" id="password-field" style="display: none;">
-                                        <p>Create an account by entering the information below. If you are a returning customer please login at the top of the page.</p>
-                                        <div class="single-input-item">
-                                            <label for="pwd" class="required">Account Password</label>
-                                            <input type="password" id="pwd" name="pwd" placeholder="Account Password" class="form-control" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 {% endif %}
 
-                                <div class="checkout-box-wrap">
-                                    <div class="single-input-item">
-                                        <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input" id="ship_to_different" name="ship_to_different">
-                                            <label class="custom-control-label" for="ship_to_different">Ship to a different address?</label>
+                                <div class="card">
+                                    <h3>Have A Coupon? <span data-toggle="collapse" data-target="#couponaccordion">Click Here To Enter Your Code</span></h3>
+                                    <div id="couponaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                        <div class="card-body">
+                                            <div class="cart-update-option">
+                                                <div class="apply-coupon-wrapper">
+                                                    <form action="{% url 'apply_coupon' %}" method="post" class="d-block d-md-flex">
+                                                        {% csrf_token %}
+                                                        <input type="text" name="coupon_code" placeholder="Enter Your Coupon Code" required />
+                                                        <button type="submit" class="check-btn sqr-btn">Apply Coupon</button>
+                                                    </form>
+                                                    {% if request.session.coupon_code %}
+                                                        <div class="mt-2">
+                                                            <span class="badge badge-success">Coupon "{{ request.session.coupon_code }}" applied</span>
+                                                            <a href="{% url 'remove_coupon' %}" class="btn btn-sm btn-outline-danger ml-2">Remove</a>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="ship-to-different single-form-row" id="shipping-fields" style="display: none;">
+                                </div>
+                            </div>
+                            <!-- Checkout Login Coupon Accordion End -->
+                        </div>
+                    </div>
+
+                    <form method="post" id="checkout-form" novalidate>
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- Checkout Billing Details -->
+                            <div class="col-lg-6">
+                                <div class="checkout-billing-details-wrap">
+                                    <h2>Billing Details</h2>
+                                    <div class="billing-form-wrap">
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="single-input-item">
-                                                    <label for="id_shipping-first_name" class="required">First Name</label>
-                                                    <input type="text" name="shipping-first_name" id="id_shipping-first_name" class="form-control">
-                                                    {% if shipping_form.first_name.errors %}
-                                                        <div class="invalid-feedback">{{ shipping_form.first_name.errors.0 }}</div>
+                                                    <label for="id_billing-first_name" class="required">First Name</label>
+                                                    <input type="text" name="billing-first_name" id="id_billing-first_name" class="form-control" required>
+                                                    {% if billing_form.first_name.errors %}
+                                                        <div class="invalid-feedback">{{ billing_form.first_name.errors.0 }}</div>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="single-input-item">
-                                                    <label for="id_shipping-last_name" class="required">Last Name</label>
-                                                    <input type="text" name="shipping-last_name" id="id_shipping-last_name" class="form-control">
-                                                    {% if shipping_form.last_name.errors %}
-                                                        <div class="invalid-feedback">{{ shipping_form.last_name.errors.0 }}</div>
+                                                    <label for="id_billing-last_name" class="required">Last Name</label>
+                                                    <input type="text" name="billing-last_name" id="id_billing-last_name" class="form-control" required>
+                                                    {% if billing_form.last_name.errors %}
+                                                        <div class="invalid-feedback">{{ billing_form.last_name.errors.0 }}</div>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="single-input-item">
-                                            <label for="id_shipping-phone" class="required">Phone</label>
-                                            <input type="tel" name="shipping-phone" id="id_shipping-phone" placeholder="+254712345678" class="form-control">
+                                            <label for="id_billing-email" class="required">Email Address</label>
+                                            <input type="email" name="billing-email" id="id_billing-email" class="form-control" required>
+                                            {% if billing_form.email.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.email.errors.0 }}</div>
+                                            {% endif %}
                                         </div>
 
                                         <div class="single-input-item">
-                                            <label for="id_shipping-county" class="required">County</label>
-                                            <select name="shipping-county" id="id_shipping-county" class="form-control county-select">
+                                            <label for="id_billing-phone" class="required">Phone</label>
+                                            <input type="tel" name="billing-phone" id="id_billing-phone" placeholder="+254712345678" class="form-control" required>
+                                            <small class="form-text text-muted">Required for delivery coordination</small>
+                                            {% if billing_form.phone.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.phone.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_billing-county" class="required">County</label>
+                                            <select name="billing-county" id="id_billing-county" class="form-control county-select" required>
                                                 <option value="">Select County</option>
                                                 {% for county in counties %}
                                                     <option value="{{ county.id }}">{{ county.name }}</option>
                                                 {% endfor %}
                                             </select>
+                                            {% if billing_form.county.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.county.errors.0 }}</div>
+                                            {% endif %}
                                         </div>
 
                                         <div class="single-input-item">
-                                            <label for="id_shipping-delivery_area" class="required">Delivery Area</label>
-                                            <select name="shipping-delivery_area" id="id_shipping-delivery_area" class="form-control area-select">
+                                            <label for="id_billing-delivery_area" class="required">Delivery Area</label>
+                                            <select name="billing-delivery_area" id="id_billing-delivery_area" class="form-control area-select" required>
                                                 <option value="">Select County First</option>
                                             </select>
+                                            <small class="form-text text-muted">Shipping fee will be calculated based on your area</small>
+                                            {% if billing_form.delivery_area.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.delivery_area.errors.0 }}</div>
+                                            {% endif %}
                                         </div>
 
                                         <div class="single-input-item">
-                                            <label for="id_shipping-detailed_address" class="required">Detailed Address</label>
-                                            <textarea name="shipping-detailed_address" id="id_shipping-detailed_address" class="form-control" rows="3" 
-                                                placeholder="Building name, floor, apartment number, landmarks..."></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="single-input-item">
-                                    <label for="ordernote">Order Note</label>
-                                    <textarea name="ordernote" id="ordernote" cols="30" rows="3" placeholder="Notes about your order, e.g. special notes for delivery." class="form-control"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Order Summary Details -->
-                    <div class="col-lg-6">
-                        <div class="order-summary-details mt-md-26 mt-sm-26">
-                            <h2>Your Order Summary</h2>
-                            <div class="order-summary-content mb-sm-4">
-                                <!-- Order Summary Table -->
-                                <div class="order-summary-table table-responsive text-center">
-                                    <table class="table table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th>Products</th>
-                                                <th>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for item in cart_items %}
-                                            <tr>
-                                                <td>
-                                                    <a href="#">
-                                                        {{ item.product.name }}
-                                                        {% if item.variant %}
-                                                            ({{ item.variant.name }})
-                                                        {% endif %}
-                                                        <strong> × {{ item.quantity }}</strong>
-                                                    </a>
-                                                </td>
-                                                <td>KSh {{ item.total_price|floatformat:2 }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                        <tfoot id="order-summary-footer">
-                                            <tr>
-                                                <td>Sub Total</td>
-                                                <td><strong>KSh <span id="subtotal-amount">{{ subtotal|floatformat:2 }}</span></strong></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Shipping <span id="shipping-info"></span></td>
-                                                <td><strong>KSh <span id="shipping-amount">{{ shipping_cost|floatformat:2 }}</span></strong></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Tax (0%)</td>
-                                                <td><strong>KSh <span id="tax-amount">{{ tax_amount|floatformat:2 }}</span></strong></td>
-                                            </tr>
-                                            {% if request.session.coupon_code %}
-                                            <tr id="discount-row">
-                                                <td>Discount</td>
-                                                <td><strong>-KSh <span id="discount-amount">0.00</span></strong></td>
-                                            </tr>
-                                            {% else %}
-                                            <tr id="discount-row" style="display: none;">
-                                                <td>Discount</td>
-                                                <td><strong>-KSh <span id="discount-amount">0.00</span></strong></td>
-                                            </tr>
+                                            <label for="id_billing-detailed_address" class="required">Detailed Address</label>
+                                            <textarea name="billing-detailed_address" id="id_billing-detailed_address" class="form-control" rows="3" 
+                                                placeholder="Building name, floor, apartment number, landmarks...&#10;Example: ABC Apartments, 2nd Floor, House No. 5B, Near Shell Petrol Station" required></textarea>
+                                            <small class="form-text text-muted">Please provide specific details to help our delivery team find you</small>
+                                            {% if billing_form.detailed_address.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.detailed_address.errors.0 }}</div>
                                             {% endif %}
-                                            <tr>
-                                                <td>Total Amount</td>
-                                                <td><strong>KSh <span id="total-amount">{{ total_amount|floatformat:2 }}</span></strong></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                        </div>
+
+                                        {% if not user.is_authenticated %}
+                                        <div class="checkout-box-wrap">
+                                            <div class="single-input-item">
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="create_pwd" name="create_pwd">
+                                                    <label class="custom-control-label" for="create_pwd">Create an account?</label>
+                                                </div>
+                                            </div>
+                                            <div class="account-create single-form-row" id="password-field" style="display: none;">
+                                                <p>Create an account by entering the information below. If you are a returning customer please login at the top of the page.</p>
+                                                <div class="single-input-item">
+                                                    <label for="pwd" class="required">Account Password</label>
+                                                    <input type="password" id="pwd" name="pwd" placeholder="Account Password" class="form-control" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <div class="checkout-box-wrap">
+                                            <div class="single-input-item">
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="ship_to_different" name="ship_to_different">
+                                                    <label class="custom-control-label" for="ship_to_different">Ship to a different address?</label>
+                                                </div>
+                                            </div>
+                                            <div class="ship-to-different single-form-row" id="shipping-fields" style="display: none;">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="single-input-item">
+                                                            <label for="id_shipping-first_name" class="required">First Name</label>
+                                                            <input type="text" name="shipping-first_name" id="id_shipping-first_name" class="form-control">
+                                                            {% if shipping_form.first_name.errors %}
+                                                                <div class="invalid-feedback">{{ shipping_form.first_name.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="single-input-item">
+                                                            <label for="id_shipping-last_name" class="required">Last Name</label>
+                                                            <input type="text" name="shipping-last_name" id="id_shipping-last_name" class="form-control">
+                                                            {% if shipping_form.last_name.errors %}
+                                                                <div class="invalid-feedback">{{ shipping_form.last_name.errors.0 }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-phone" class="required">Phone</label>
+                                                    <input type="tel" name="shipping-phone" id="id_shipping-phone" placeholder="+254712345678" class="form-control">
+                                                </div>
+
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-county" class="required">County</label>
+                                                    <select name="shipping-county" id="id_shipping-county" class="form-control county-select">
+                                                        <option value="">Select County</option>
+                                                        {% for county in counties %}
+                                                            <option value="{{ county.id }}">{{ county.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-delivery_area" class="required">Delivery Area</label>
+                                                    <select name="shipping-delivery_area" id="id_shipping-delivery_area" class="form-control area-select">
+                                                        <option value="">Select County First</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-detailed_address" class="required">Detailed Address</label>
+                                                    <textarea name="shipping-detailed_address" id="id_shipping-detailed_address" class="form-control" rows="3" 
+                                                        placeholder="Building name, floor, apartment number, landmarks..."></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="ordernote">Order Note</label>
+                                            <textarea name="ordernote" id="ordernote" cols="30" rows="3" placeholder="Notes about your order, e.g. special notes for delivery." class="form-control"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
 
-                                <!-- Order Payment Method -->
-                                <div class="order-payment-method">
-                                    <div class="single-payment-method show">
-                                        <div class="payment-method-name">
-                                            <div class="custom-control custom-radio">
-                                                <input type="radio" id="cashon" name="paymentmethod" value="cash" class="custom-control-input" />
-                                                <label class="custom-control-label" for="cashon">Cash On Delivery</label>
+                            <!-- Order Summary Details -->
+                            <div class="col-lg-6">
+                                <div class="order-summary-details mt-md-26 mt-sm-26">
+                                    <h2>Your Order Summary</h2>
+                                    <div class="order-summary-content mb-sm-4">
+                                        <!-- Order Summary Table -->
+                                        <div class="order-summary-table table-responsive text-center">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Products</th>
+                                                        <th>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in cart_items %}
+                                                    <tr>
+                                                        <td>
+                                                            <a href="#">
+                                                            {{ item.product.name|slice:":15" }}{% if item.product.name|length > 15 %}...{% endif %}
+                                                                {% if item.variant %}
+                                                                    ({{ item.variant.name }})
+                                                                {% endif %}
+                                                                <strong> × {{ item.quantity }}</strong>
+                                                            </a>
+                                                        </td>
+                                                        <td>KSh {{ item.total_price|floatformat:2 }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot id="order-summary-footer">
+                                                    <tr>
+                                                        <td>Sub Total</td>
+                                                        <td><strong>KSh <span id="subtotal-amount">{{ subtotal|floatformat:2 }}</span></strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Shipping <span id="shipping-info"></span></td>
+                                                        <td><strong>KSh <span id="shipping-amount">{{ shipping_cost|floatformat:2 }}</span></strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Tax (0%)</td>
+                                                        <td><strong>KSh <span id="tax-amount">{{ tax_amount|floatformat:2 }}</span></strong></td>
+                                                    </tr>
+                                                    {% if request.session.coupon_code %}
+                                                    <tr id="discount-row">
+                                                        <td>Discount</td>
+                                                        <td><strong>-KSh <span id="discount-amount">0.00</span></strong></td>
+                                                    </tr>
+                                                    {% else %}
+                                                    <tr id="discount-row" style="display: none;">
+                                                        <td>Discount</td>
+                                                        <td><strong>-KSh <span id="discount-amount">0.00</span></strong></td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    <tr>
+                                                        <td>Total Amount</td>
+                                                        <td><strong>KSh <span id="total-amount">{{ total_amount|floatformat:2 }}</span></strong></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+
+                                        <!-- Order Payment Method -->
+                                        <div class="order-payment-method">
+                                            <div class="single-payment-method show">
+                                                <div class="payment-method-name">
+                                                    <div class="custom-control custom-radio">
+                                                        <input type="radio" id="cashon" name="paymentmethod" value="cash" class="custom-control-input" />
+                                                        <label class="custom-control-label" for="cashon">Cash On Delivery</label>
+                                                    </div>
+                                                </div>
+                                                <div class="payment-method-details" data-method="cash">
+                                                    <p>Pay with cash upon delivery.</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="single-payment-method">
+                                                <div class="payment-method-name">
+                                                    <div class="custom-control custom-radio">
+                                                        <input type="radio" id="mpesa" name="paymentmethod" value="mpesa" class="custom-control-input" checked />
+                                                        <label class="custom-control-label" for="mpesa">M-Pesa Payment</label>
+                                                    </div>
+                                                </div>
+                                                <div class="payment-method-details" data-method="mpesa">
+                                                    <p>Pay using M-Pesa. You will receive an STK push notification on your phone.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="single-payment-method">
+                                                <div class="payment-method-name">
+                                                    <div class="custom-control custom-radio">
+                                                        <input type="radio" id="directbank" name="paymentmethod" value="bank" class="custom-control-input" />
+                                                        <label class="custom-control-label" for="directbank">Direct Bank Transfer</label>
+                                                    </div>
+                                                </div>
+                                                <div class="payment-method-details" data-method="bank">
+                                                    <p>Make your payment directly into our bank account. Please use your Order ID as the payment reference.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="summary-footer-area">
+                                                <div class="custom-control custom-checkbox mb-14">
+                                                    <input type="checkbox" class="custom-control-input" id="terms" required />
+                                                    <label class="custom-control-label" for="terms">I have read and agree to the website <a href="#">terms and conditions.</a></label>
+                                                </div>
+                                                <button type="submit" class="check-btn sqr-btn" id="place-order-btn">Place Order</button>
                                             </div>
                                         </div>
-                                        <div class="payment-method-details" data-method="cash">
-                                            <p>Pay with cash upon delivery.</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="single-payment-method">
-                                        <div class="payment-method-name">
-                                            <div class="custom-control custom-radio">
-                                                <input type="radio" id="mpesa" name="paymentmethod" value="mpesa" class="custom-control-input" checked />
-                                                <label class="custom-control-label" for="mpesa">M-Pesa Payment</label>
-                                            </div>
-                                        </div>
-                                        <div class="payment-method-details" data-method="mpesa">
-                                            <p>Pay using M-Pesa. You will receive an STK push notification on your phone.</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="single-payment-method">
-                                        <div class="payment-method-name">
-                                            <div class="custom-control custom-radio">
-                                                <input type="radio" id="directbank" name="paymentmethod" value="bank" class="custom-control-input" />
-                                                <label class="custom-control-label" for="directbank">Direct Bank Transfer</label>
-                                            </div>
-                                        </div>
-                                        <div class="payment-method-details" data-method="bank">
-                                            <p>Make your payment directly into our bank account. Please use your Order ID as the payment reference.</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="summary-footer-area">
-                                        <div class="custom-control custom-checkbox mb-14">
-                                            <input type="checkbox" class="custom-control-input" id="terms" required />
-                                            <label class="custom-control-label" for="terms">I have read and agree to the website <a href="#">terms and conditions.</a></label>
-                                        </div>
-                                        <button type="submit" class="check-btn sqr-btn" id="place-order-btn">Place Order</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-    <!-- checkout main wrapper end -->
-
-    <!-- M-Pesa Payment Modal -->
-    <div class="modal fade" id="mpesaModal" tabindex="-1" role="dialog" aria-labelledby="mpesaModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mpesaModalLabel">M-Pesa Payment</h5>
-                </div>
-                <div class="modal-body text-center">
-                    <div id="mpesa-loading" style="display: none;">
-                        <div class="spinner-border" role="status">
-                            <span class="sr-only">Loading...</span>
-                        </div>
-                        <p class="mt-2">Processing payment...</p>
-                    </div>
-                    <div id="mpesa-message">
-                        <p>Please check your phone and enter your M-Pesa PIN to complete the payment.</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="retry-payment" style="display: none;">Retry Payment</button>
+                    </form>
                 </div>
             </div>
-        </div>
-    </div>
+            <!-- checkout main wrapper end -->
+
+            <!-- M-Pesa Payment Modal -->
+            <div class="modal fade" id="mpesaModal" tabindex="-1" role="dialog" aria-labelledby="mpesaModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mpesaModalLabel">M-Pesa Payment</h5>
+                        </div>
+                        <div class="modal-body text-center">
+                            <div id="mpesa-loading" style="display: none;">
+                                <div class="spinner-border" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                                <p class="mt-2">Processing payment...</p>
+                            </div>
+                            <div id="mpesa-message">
+                                <p>Please check your phone and enter your M-Pesa PIN to complete the payment.</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" id="retry-payment" style="display: none;">Retry Payment</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script>
@@ -1277,3 +1182,37 @@ if (document.readyState === 'loading') {
 }
 </script>
 
+<!-- footer area start -->
+         <br>
+        <footer>
+            {% include 'partials/footer.html' %}
+        </footer>
+        <!-- footer area end -->
+    </div>
+
+    <!-- Quick view modal start -->
+    <div class="modal" id="quick_view">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- product details inner will be loaded via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Quick view modal end -->
+
+    <!-- Scroll to top start -->
+    <div class="scroll-top not-visible">
+        <i class="fa fa-angle-up"></i>
+    </div>
+    <!-- Scroll to Top End -->
+
+  
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
