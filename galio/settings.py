@@ -20,7 +20,7 @@ ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://ce564ecf696c.ngrok-free.app",
+    "https://3f33d51deec1.ngrok-free.app",
 ]
 
 
@@ -152,7 +152,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'your_app_name.views': {  # Replace with your actual app name
+        'ecommerce.views': {  
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
             'propagate': True,

@@ -40,7 +40,7 @@ class County(models.Model):
 class DeliveryArea(models.Model):
     """Delivery areas within counties with shipping fees"""
     name = models.CharField(max_length=100)
-    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name='areas')
+    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name='delivery_areas')
     shipping_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     delivery_days = models.IntegerField(default=1)  # Expected delivery days
     is_active = models.BooleanField(default=True)
@@ -64,22 +64,40 @@ class Address(models.Model):
     address_type = models.CharField(max_length=10, choices=ADDRESS_TYPES)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    company = models.CharField(max_length=100, blank=True)
-    address_line_1 = models.CharField(max_length=255)
-    address_line_2 = models.CharField(max_length=255, blank=True)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    country = models.CharField(max_length=100)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Simplified address fields
+    county = models.ForeignKey(County, on_delete=models.CASCADE, blank=True , null=True)
+    delivery_area = models.ForeignKey(DeliveryArea, on_delete=models.CASCADE, blank=True, null=True)
+    detailed_address = models.TextField(help_text="Building name, floor, apartment number, landmark, etc.", blank=True, null=True)
+
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
         verbose_name_plural = 'Addresses'
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} - {self.address_line_1}"
+        return f"{self.first_name} {self.last_name} - {self.delivery_area.name}, {self.county.name}"
+    
+    @property
+    def shipping_fee(self):
+        return self.delivery_area.shipping_fee
+    
+    @property
+    def full_address(self):
+        return f"{self.detailed_address}, {self.delivery_area.name}, {self.county.name}, Kenya"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one default address per type per user
+        if self.is_default:
+            Address.objects.filter(
+                user=self.user, 
+                address_type=self.address_type, 
+                is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
 
 
 class Category(models.Model):

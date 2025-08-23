@@ -691,7 +691,10 @@ import json
 from datetime import datetime
 import uuid
 import logging
-
+from .models import Cart, CartItem, Order, OrderItem, Address, Coupon, User, County, DeliveryArea
+from .forms import CheckoutForm, BillingAddressForm, ShippingAddressForm, AddressSelectionForm
+from .models import Payment
+from django.views.decorators.http import require_POST , require_GET
 from .models import Cart, CartItem, Order, OrderItem, Address, Coupon, User
 from .forms import CheckoutForm, BillingAddressForm, ShippingAddressForm
 from .models import Payment
@@ -713,24 +716,72 @@ class CheckoutView(View):
             return redirect('cart')
         
         # Get user addresses if authenticated
-        addresses = []
+        billing_addresses = []
+        shipping_addresses = []
         if request.user.is_authenticated:
-            addresses = Address.objects.filter(user=request.user)
+            billing_addresses = Address.objects.filter(user=request.user, address_type='billing')
+            shipping_addresses = Address.objects.filter(user=request.user, address_type='shipping')
         
         # Initialize forms
         billing_form = BillingAddressForm()
         shipping_form = ShippingAddressForm()
+        address_selection_form = None
+        
+        if request.user.is_authenticated:
+            address_selection_form = AddressSelectionForm(user=request.user)
+        
+        # Get counties and their delivery areas for dropdown population
+        counties = County.objects.filter(is_active=True).prefetch_related(
+            'delivery_areas'
+        ).order_by('name')
+        
+        # Create a structured data for counties and areas
+        # Get counties and their delivery areas for dropdown population
+        counties = County.objects.filter(is_active=True).prefetch_related(
+            'delivery_areas'
+        ).order_by('name')
+
+        # Create a structured data for counties and areas
+        counties_data = []
+        for county in counties:
+            areas = county.delivery_areas.filter(is_active=True).order_by('name')
+            county_data = {
+                'id': str(county.id),  # Convert to string for consistency
+                'name': county.name,
+                'areas': [{
+                    'id': str(area.id),  # Convert to string for consistency
+                    'name': area.name,
+                    'shipping_fee': float(area.shipping_fee),
+                    'delivery_days': area.delivery_days,
+                    'display_name': f"{area.name} (KSh {area.shipping_fee} - {area.delivery_days} day{'s' if area.delivery_days > 1 else ''})"
+                } for area in areas]
+            }
+            counties_data.append(county_data)
+
+        print(f"Counties data prepared: {len(counties_data)} counties")  # Debug line
+        for county in counties_data:
+            print(f"County: {county['name']} has {len(county['areas'])} areas")  # Debug line
+        
+        # Calculate initial totals
+        subtotal = cart.total_price
+        shipping_cost = Decimal('0.00')
+        tax_amount = self.calculate_tax(cart)
+        total_amount = subtotal + shipping_cost + tax_amount
         
         context = {
             'cart': cart,
             'cart_items': cart.items.all(),
             'billing_form': billing_form,
             'shipping_form': shipping_form,
-            'addresses': addresses,
-            'subtotal': cart.total_price,
-            'shipping_cost': self.calculate_shipping(cart),
-            'tax_amount': self.calculate_tax(cart),
-            'total_amount': self.calculate_total(cart),
+            'address_selection_form': address_selection_form,
+            'billing_addresses': billing_addresses,
+            'shipping_addresses': shipping_addresses,
+            'subtotal': subtotal,
+            'shipping_cost': shipping_cost,
+            'tax_amount': tax_amount,
+            'total_amount': total_amount,
+            'counties': counties,
+            'counties_data': json.dumps(counties_data),  # JSON data for JavaScript
         }
         
         return render(request, self.template_name, context)
@@ -746,27 +797,73 @@ class CheckoutView(View):
             messages.error(request, 'Your cart is empty.')
             return redirect('cart')
         
-        billing_form = BillingAddressForm(request.POST, prefix='billing')
+        # Check if user selected existing address
+        selected_billing_address = None
+        selected_shipping_address = None
         
-        # Check if shipping to different address
+        if request.user.is_authenticated:
+            billing_address_id = request.POST.get('billing_address_selection')
+            shipping_address_id = request.POST.get('shipping_address_selection')
+            
+            if billing_address_id and billing_address_id != 'new':
+                try:
+                    selected_billing_address = Address.objects.get(
+                        id=billing_address_id, user=request.user, address_type='billing'
+                    )
+                except Address.DoesNotExist:
+                    pass
+            
+            if shipping_address_id and shipping_address_id != 'new':
+                try:
+                    selected_shipping_address = Address.objects.get(
+                        id=shipping_address_id, user=request.user, address_type='shipping'
+                    )
+                except Address.DoesNotExist:
+                    pass
+        
+        # Determine which forms to validate
+        billing_form = None
+        shipping_form = None
+        
+        if not selected_billing_address:
+            billing_form = BillingAddressForm(request.POST, prefix='billing')
+        
         ship_to_different = request.POST.get('ship_to_different') == 'on'
-        shipping_form = ShippingAddressForm(request.POST, prefix='shipping') if ship_to_different else None
+        if ship_to_different and not selected_shipping_address:
+            shipping_form = ShippingAddressForm(request.POST, prefix='shipping')
         
-        logger.info(f"Ship to different address: {ship_to_different}")
-        logger.info(f"Billing form valid: {billing_form.is_valid()}")
-        if shipping_form:
-            logger.info(f"Shipping form valid: {shipping_form.is_valid()}")
+        # Validate forms if needed
+        forms_valid = True
+        if billing_form and not billing_form.is_valid():
+            forms_valid = False
+            logger.error(f"Billing form errors: {billing_form.errors}")
         
-        if billing_form.is_valid() and (not shipping_form or shipping_form.is_valid()):
+        if shipping_form and not shipping_form.is_valid():
+            forms_valid = False
+            logger.error(f"Shipping form errors: {shipping_form.errors}")
+        
+        if forms_valid:
             try:
                 with transaction.atomic():
                     # Create or get user
-                    user = self.get_or_create_user(request, billing_form.cleaned_data)
+                    user = self.get_or_create_user(request, billing_form, selected_billing_address)
                     logger.info(f"User for order: {user}")
                     
-                    # Calculate amounts
+                    # Get or create addresses
+                    billing_address = selected_billing_address or self.create_address_from_form(
+                        user, billing_form
+                    )
+                    
+                    if ship_to_different:
+                        shipping_address = selected_shipping_address or self.create_address_from_form(
+                            user, shipping_form, 'shipping'
+                        )
+                    else:
+                        shipping_address = billing_address
+                    
+                    # Calculate amounts with actual shipping cost
                     subtotal = cart.total_price
-                    shipping_cost = self.calculate_shipping(cart)
+                    shipping_cost = shipping_address.delivery_area.shipping_fee
                     tax_amount = self.calculate_tax(cart)
                     discount_amount = self.apply_coupon(request, subtotal)
                     total_amount = subtotal + shipping_cost + tax_amount - discount_amount
@@ -781,8 +878,8 @@ class CheckoutView(View):
                         tax_amount=tax_amount,
                         discount_amount=discount_amount,
                         total_amount=total_amount,
-                        billing_address=self.format_address(billing_form.cleaned_data),
-                        shipping_address=self.format_address(shipping_form.cleaned_data if shipping_form else billing_form.cleaned_data),
+                        billing_address=self.format_address_object(billing_address),
+                        shipping_address=self.format_address_object(shipping_address),
                         payment_method=request.POST.get('paymentmethod', 'mpesa'),
                     )
                     
@@ -814,7 +911,7 @@ class CheckoutView(View):
                     logger.info(f"Payment method: {payment_method}")
                     
                     if payment_method == 'mpesa':
-                        phone_number = self.clean_phone_number(billing_form.cleaned_data.get('phone'))
+                        phone_number = self.clean_phone_number(billing_address.phone)
                         logger.info(f"Cleaned phone number: {phone_number}")
                         
                         if phone_number:
@@ -822,11 +919,14 @@ class CheckoutView(View):
                         else:
                             logger.error("Invalid phone number for M-Pesa payment")
                             messages.error(request, 'Valid phone number is required for M-Pesa payment.')
-                            order.delete()  # Clean up order
+                            order.delete()
                             return self.get(request)
                     else:
                         # Handle other payment methods
                         logger.info(f"Non-M-Pesa payment method: {payment_method}")
+                        # Clear cart after successful order creation
+                        cart.items.all().delete()
+                        cart.delete()
                         return redirect('order_confirmation', order_number=order.order_number)
                         
             except Exception as e:
@@ -834,22 +934,40 @@ class CheckoutView(View):
                 messages.error(request, f'An error occurred while processing your order: {str(e)}')
                 return self.get(request)
         else:
-            logger.error("Form validation failed")
-            if billing_form.errors:
-                logger.error(f"Billing form errors: {billing_form.errors}")
-            if shipping_form and shipping_form.errors:
-                logger.error(f"Shipping form errors: {shipping_form.errors}")
             messages.error(request, 'Please correct the errors below.')
-            
+        
+        # Re-render form with errors - need to get counties data again
+        counties = County.objects.filter(is_active=True).prefetch_related(
+            'delivery_areas'
+        ).order_by('name')
+        
+        counties_data = []
+        for county in counties:
+            areas = county.delivery_areas.filter(is_active=True).order_by('name')
+            county_data = {
+                'id': str(county.id),  # Convert to string for consistency
+                'name': county.name,
+                'areas': [{
+                    'id': str(area.id),  # Convert to string for consistency
+                    'name': area.name,
+                    'shipping_fee': float(area.shipping_fee),
+                    'delivery_days': area.delivery_days,
+                    'display_name': f"{area.name} (KSh {area.shipping_fee} - {area.delivery_days} day{'s' if area.delivery_days > 1 else ''})"
+                } for area in areas]
+            }
+            counties_data.append(county_data)
+        
         context = {
             'cart': cart,
             'cart_items': cart.items.all(),
             'billing_form': billing_form,
             'shipping_form': shipping_form,
             'subtotal': cart.total_price,
-            'shipping_cost': self.calculate_shipping(cart),
+            'shipping_cost': Decimal('0.00'),
             'tax_amount': self.calculate_tax(cart),
             'total_amount': self.calculate_total(cart),
+            'counties': counties,
+            'counties_data': json.dumps(counties_data),
         }
         
         return render(request, self.template_name, context)
@@ -862,13 +980,24 @@ class CheckoutView(View):
             cart, created = Cart.objects.get_or_create(session_key=session_key)
         return cart
     
-    def get_or_create_user(self, request, form_data):
+    def get_or_create_user(self, request, billing_form, selected_billing_address):
         if request.user.is_authenticated:
             return request.user
         
+        # Get user data from form or selected address
+        if selected_billing_address:
+            email = selected_billing_address.user.email
+            first_name = selected_billing_address.first_name
+            last_name = selected_billing_address.last_name
+            phone = selected_billing_address.phone
+        else:
+            email = billing_form.cleaned_data.get('email')
+            first_name = billing_form.cleaned_data.get('first_name', '')
+            last_name = billing_form.cleaned_data.get('last_name', '')
+            phone = billing_form.cleaned_data.get('phone', '')
+        
         # Check if user wants to create account
         if request.POST.get('create_pwd'):
-            email = form_data.get('email')
             password = request.POST.get('pwd')
             
             if User.objects.filter(email=email).exists():
@@ -879,22 +1008,21 @@ class CheckoutView(View):
                 username=email,
                 email=email,
                 password=password,
-                first_name=form_data.get('first_name', ''),
-                last_name=form_data.get('last_name', ''),
-                phone=form_data.get('phone', '')
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone
             )
             return user
         
         # For guest checkout, create a temporary user or handle differently
-        # You might want to allow guest orders here
-        email = form_data.get('email')
         if email and not User.objects.filter(email=email).exists():
             # Create a guest user (you might want to mark this differently)
             user = User.objects.create_user(
                 username=f"guest_{uuid.uuid4().hex[:8]}",
                 email=email,
-                first_name=form_data.get('first_name', ''),
-                last_name=form_data.get('last_name', ''),
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
                 is_active=False  # Mark as guest user
             )
             return user
@@ -903,25 +1031,47 @@ class CheckoutView(View):
         
         raise ValueError("Cannot create user - insufficient data")
     
-    def format_address(self, address_data):
-        return f"{address_data.get('first_name', '')} {address_data.get('last_name', '')}\n" \
-               f"{address_data.get('company', '')}\n" \
-               f"{address_data.get('address_line_1', '')}\n" \
-               f"{address_data.get('address_line_2', '')}\n" \
-               f"{address_data.get('city', '')}, {address_data.get('state', '')} {address_data.get('postal_code', '')}\n" \
-               f"{address_data.get('country', '')}\n" \
-               f"Phone: {address_data.get('phone', '')}"
+    def create_address_from_form(self, user, form):
+        """Create address from validated form data"""
+        if not form or not form.is_valid():
+            raise ValueError("Form is not valid")
+            
+        address_type = 'billing' if form.prefix == 'billing' else 'shipping'
+        
+        address = Address.objects.create(
+            user=user,
+            address_type=address_type,
+            first_name=form.cleaned_data['first_name'],
+            last_name=form.cleaned_data['last_name'],
+            phone=form.cleaned_data['phone'],
+            county=form.cleaned_data['county'],
+            delivery_area=form.cleaned_data['delivery_area'],
+            detailed_address=form.cleaned_data['detailed_address']
+        )
+        
+        return address
     
-    def calculate_shipping(self, cart):
-        return Decimal('00.00')  # Flat rate for now
+    def format_address_object(self, address):
+        """Format address object as string for order"""
+        return f"{address.first_name} {address.last_name}\n" \
+               f"{address.detailed_address}\n" \
+               f"{address.delivery_area.name}, {address.county.name}\n" \
+               f"Kenya\n" \
+               f"Phone: {address.phone}"
+    
+    def calculate_shipping(self, cart, delivery_area=None):
+        """Calculate shipping cost based on delivery area"""
+        if delivery_area:
+            return delivery_area.shipping_fee
+        return Decimal('0.00')
     
     def calculate_tax(self, cart):
-        tax_rate = Decimal('0.00')  # 00% VAT in Kenya
+        tax_rate = Decimal('0.00')  # Null/16% VAT in Kenya
         return cart.total_price * tax_rate
     
-    def calculate_total(self, cart):
+    def calculate_total(self, cart, shipping_cost=None):
         subtotal = cart.total_price
-        shipping = self.calculate_shipping(cart)
+        shipping = shipping_cost or Decimal('0.00')
         tax = self.calculate_tax(cart)
         discount = self.apply_coupon_amount(cart)
         return subtotal + shipping + tax - discount
@@ -1060,6 +1210,7 @@ class CheckoutView(View):
                 return self.get(request)
 
 
+# Keep the rest of your existing code (MpesaService, callback, etc.) unchanged
 class MpesaService:
     def __init__(self):
         self.consumer_key = getattr(settings, 'MPESA_CONSUMER_KEY', '')
@@ -1257,7 +1408,7 @@ def mpesa_callback(request):
         return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Error processing callback: {str(e)}'})
 
 
-
+# Keep the rest of your existing functions...
 def apply_coupon(request):
     """Apply coupon code"""
     if request.method == 'POST':
@@ -1352,7 +1503,6 @@ def check_payment_status(request):
     except Exception as e:
         logger.exception(f"Error checking payment status: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
-
 
 
 def order_confirmation(request, order_number):

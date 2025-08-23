@@ -35,19 +35,38 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
+from django.contrib import admin
+from .models import County, DeliveryArea
+
+
+@admin.register(County)
+class CountyAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "code")
+    ordering = ("name",)
+
+
+@admin.register(DeliveryArea)
+class DeliveryAreaAdmin(admin.ModelAdmin):
+    list_display = ("name", "county", "shipping_fee", "delivery_days", "is_active", "created_at")
+    list_filter = ("county", "is_active")
+    search_fields = ("name", "county__name")
+    ordering = ("county__name", "name")
+
 
 # Address Admin
 class AddressInline(admin.TabularInline):
     model = Address
     extra = 0
-    fields = ['address_type', 'first_name', 'last_name', 'address_line_1', 'city', 'state', 'postal_code', 'country', 'is_default']
+    fields = ['address_type', 'first_name', 'last_name' , 'country', 'is_default']
 
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ['user', 'address_type', 'full_name', 'city', 'state', 'country', 'is_default']
-    list_filter = ['address_type', 'country', 'state', 'is_default']
-    search_fields = ['user__email', 'first_name', 'last_name', 'city', 'state']
+    list_display = ['user', 'address_type', 'full_name', 'is_default']
+    list_filter = ['address_type',  'is_default']
+    search_fields = ['user__email', 'first_name', 'last_name' ]
     
     def full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}"

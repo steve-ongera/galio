@@ -1,0 +1,803 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+    .invalid-feedback {
+        display: block;
+        color: #dc3545;
+        font-size: 0.875em;
+        margin-top: 0.25rem;
+    }
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+    .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+</style>
+
+    <!-- breadcrumb area start -->
+    <div class="breadcrumb-area">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="breadcrumb-wrap">
+                        <nav aria-label="breadcrumb">
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Checkout</li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- breadcrumb area end -->
+
+    <!-- checkout main wrapper start -->
+    <div class="checkout-page-wrapper">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <!-- Display Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Checkout Login Coupon Accordion Start -->
+                    <div class="checkoutaccordion" id="checkOutAccordion">
+                        {% if not user.is_authenticated %}
+                        <div class="card">
+                            <h3>Returning Customer? <span data-toggle="collapse" data-target="#logInaccordion">Click Here To Login</span></h3>
+                            <div id="logInaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                <div class="card-body">
+                                    <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new customer, please proceed to the Billing &amp; Shipping section.</p>
+                                    <div class="login-reg-form-wrap mt-20">
+                                        <div class="row">
+                                            <div class="col-lg-7 m-auto">
+                                                <form action="{% url 'login' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="next" value="{% url 'checkout' %}">
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <div class="single-input-item">
+                                                                <input type="email" name="email" placeholder="Enter your Email" required />
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <div class="single-input-item">
+                                                                <input type="password" name="password" placeholder="Enter your Password" required />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="single-input-item">
+                                                        <div class="login-reg-form-meta d-flex align-items-center justify-content-between">
+                                                            <div class="remember-meta">
+                                                                <div class="custom-control custom-checkbox">
+                                                                    <input type="checkbox" class="custom-control-input" id="rememberMe" name="rememberMe" />
+                                                                    <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                                                                </div>
+                                                            </div>
+                                                            <a href="{% url 'password_reset' %}" class="forget-pwd">Forget Password?</a>
+                                                        </div>
+                                                    </div>
+                                                    <div class="single-input-item">
+                                                        <button type="submit" class="check-btn sqr-btn">Login</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="card">
+                            <h3>Have A Coupon? <span data-toggle="collapse" data-target="#couponaccordion">Click Here To Enter Your Code</span></h3>
+                            <div id="couponaccordion" class="collapse" data-parent="#checkOutAccordion">
+                                <div class="card-body">
+                                    <div class="cart-update-option">
+                                        <div class="apply-coupon-wrapper">
+                                            <form action="{% url 'apply_coupon' %}" method="post" class="d-block d-md-flex">
+                                                {% csrf_token %}
+                                                <input type="text" name="coupon_code" placeholder="Enter Your Coupon Code" required />
+                                                <button type="submit" class="check-btn sqr-btn">Apply Coupon</button>
+                                            </form>
+                                            {% if request.session.coupon_code %}
+                                                <div class="mt-2">
+                                                    <span class="badge badge-success">Coupon "{{ request.session.coupon_code }}" applied</span>
+                                                    <a href="{% url 'remove_coupon' %}" class="btn btn-sm btn-outline-danger ml-2">Remove</a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Checkout Login Coupon Accordion End -->
+                </div>
+            </div>
+
+            <form method="post" id="checkout-form" novalidate>
+                {% csrf_token %}
+                <div class="row">
+                    <!-- Checkout Billing Details -->
+                    <div class="col-lg-6">
+                        <div class="checkout-billing-details-wrap">
+                            <h2>Billing Details</h2>
+                            <div class="billing-form-wrap">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="single-input-item">
+                                            <label for="id_billing-first_name" class="required">First Name</label>
+                                            <input type="text" name="billing-first_name" id="id_billing-first_name" class="form-control" required>
+                                            {% if billing_form.first_name.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.first_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="single-input-item">
+                                            <label for="id_billing-last_name" class="required">Last Name</label>
+                                            <input type="text" name="billing-last_name" id="id_billing-last_name" class="form-control" required>
+                                            {% if billing_form.last_name.errors %}
+                                                <div class="invalid-feedback">{{ billing_form.last_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-email" class="required">Email Address</label>
+                                    <input type="email" name="billing-email" id="id_billing-email" class="form-control" required>
+                                    {% if billing_form.email.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-company">Company Name</label>
+                                    <input type="text" name="billing-company" id="id_billing-company" class="form-control">
+                                    {% if billing_form.company.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.company.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-country" class="required">Country</label>
+                                    <select name="billing-country" id="id_billing-country" class="form-control" required>
+                                        <option value="">Select Country</option>
+                                        <option value="KE">Kenya</option>
+                                        <option value="US">United States</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="CA">Canada</option>
+                                    </select>
+                                    {% if billing_form.country.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.country.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-address_line_1" class="required pt-20">Street address</label>
+                                    <input type="text" name="billing-address_line_1" id="id_billing-address_line_1" placeholder="House number and street name" class="form-control" required>
+                                    {% if billing_form.address_line_1.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.address_line_1.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <input type="text" name="billing-address_line_2" id="id_billing-address_line_2" placeholder="Apartment, suite, unit etc. (optional)" class="form-control">
+                                    {% if billing_form.address_line_2.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.address_line_2.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-city" class="required">Town / City</label>
+                                    <input type="text" name="billing-city" id="id_billing-city" class="form-control" required>
+                                    {% if billing_form.city.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.city.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-state">State / Division</label>
+                                    <input type="text" name="billing-state" id="id_billing-state" class="form-control">
+                                    {% if billing_form.state.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.state.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-postal_code" class="required">Postcode / ZIP</label>
+                                    <input type="text" name="billing-postal_code" id="id_billing-postal_code" class="form-control" required>
+                                    {% if billing_form.postal_code.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.postal_code.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="id_billing-phone" class="required">Phone</label>
+                                    <input type="tel" name="billing-phone" id="id_billing-phone" placeholder="+254712345678" class="form-control" required>
+                                    {% if billing_form.phone.errors %}
+                                        <div class="invalid-feedback">{{ billing_form.phone.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                {% if not user.is_authenticated %}
+                                <div class="checkout-box-wrap">
+                                    <div class="single-input-item">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="create_pwd" name="create_pwd">
+                                            <label class="custom-control-label" for="create_pwd">Create an account?</label>
+                                        </div>
+                                    </div>
+                                    <div class="account-create single-form-row" id="password-field" style="display: none;">
+                                        <p>Create an account by entering the information below. If you are a returning customer please login at the top of the page.</p>
+                                        <div class="single-input-item">
+                                            <label for="pwd" class="required">Account Password</label>
+                                            <input type="password" id="pwd" name="pwd" placeholder="Account Password" class="form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="checkout-box-wrap">
+                                    <div class="single-input-item">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="ship_to_different" name="ship_to_different">
+                                            <label class="custom-control-label" for="ship_to_different">Ship to a different address?</label>
+                                        </div>
+                                    </div>
+                                    <div class="ship-to-different single-form-row" id="shipping-fields" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-first_name" class="required">First Name</label>
+                                                    <input type="text" name="shipping-first_name" id="id_shipping-first_name" class="form-control">
+                                                    {% if shipping_form.first_name.errors %}
+                                                        <div class="invalid-feedback">{{ shipping_form.first_name.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="single-input-item">
+                                                    <label for="id_shipping-last_name" class="required">Last Name</label>
+                                                    <input type="text" name="shipping-last_name" id="id_shipping-last_name" class="form-control">
+                                                    {% if shipping_form.last_name.errors %}
+                                                        <div class="invalid-feedback">{{ shipping_form.last_name.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-company">Company Name</label>
+                                            <input type="text" name="shipping-company" id="id_shipping-company" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-country" class="required">Country</label>
+                                            <select name="shipping-country" id="id_shipping-country" class="form-control">
+                                                <option value="">Select Country</option>
+                                                <option value="KE">Kenya</option>
+                                                <option value="US">United States</option>
+                                                <option value="GB">United Kingdom</option>
+                                                <option value="CA">Canada</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-address_line_1" class="required">Street address</label>
+                                            <input type="text" name="shipping-address_line_1" id="id_shipping-address_line_1" placeholder="House number and street name" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <input type="text" name="shipping-address_line_2" id="id_shipping-address_line_2" placeholder="Apartment, suite, unit etc. (optional)" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-city" class="required">Town / City</label>
+                                            <input type="text" name="shipping-city" id="id_shipping-city" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-state">State / Division</label>
+                                            <input type="text" name="shipping-state" id="id_shipping-state" class="form-control">
+                                        </div>
+
+                                        <div class="single-input-item">
+                                            <label for="id_shipping-postal_code" class="required">Postcode / ZIP</label>
+                                            <input type="text" name="shipping-postal_code" id="id_shipping-postal_code" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="single-input-item">
+                                    <label for="ordernote">Order Note</label>
+                                    <textarea name="ordernote" id="ordernote" cols="30" rows="3" placeholder="Notes about your order, e.g. special notes for delivery." class="form-control"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Summary Details -->
+                    <div class="col-lg-6">
+                        <div class="order-summary-details mt-md-26 mt-sm-26">
+                            <h2>Your Order Summary</h2>
+                            <div class="order-summary-content mb-sm-4">
+                                <!-- Order Summary Table -->
+                                <div class="order-summary-table table-responsive text-center">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Products</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in cart_items %}
+                                            <tr>
+                                                <td>
+                                                    <a href="#">
+                                                        {{ item.product.name }}
+                                                        {% if item.variant %}
+                                                            ({{ item.variant.name }})
+                                                        {% endif %}
+                                                        <strong> × {{ item.quantity }}</strong>
+                                                    </a>
+                                                </td>
+                                                <td>ksh{{ item.total_price|floatformat:2 }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td>Sub Total</td>
+                                                <td><strong>ksh{{ subtotal|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Shipping</td>
+                                                <td><strong>ksh{{ shipping_cost|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Tax (16%)</td>
+                                                <td><strong>ksh{{ tax_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            {% if request.session.coupon_code %}
+                                            <tr>
+                                                <td>Discount</td>
+                                                <td><strong>-ksh{{ discount_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                            {% endif %}
+                                            <tr>
+                                                <td>Total Amount</td>
+                                                <td><strong>ksh{{ total_amount|floatformat:2 }}</strong></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <!-- Order Payment Method -->
+                                <div class="order-payment-method">
+                                    <div class="single-payment-method show">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="cashon" name="paymentmethod" value="cash" class="custom-control-input" />
+                                                <label class="custom-control-label" for="cashon">Cash On Delivery</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="cash">
+                                            <p>Pay with cash upon delivery.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="single-payment-method">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="mpesa" name="paymentmethod" value="mpesa" class="custom-control-input" checked />
+                                                <label class="custom-control-label" for="mpesa">M-Pesa Payment</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="mpesa">
+                                            <p>Pay using M-Pesa. You will receive an STK push notification on your phone.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="single-payment-method">
+                                        <div class="payment-method-name">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="directbank" name="paymentmethod" value="bank" class="custom-control-input" />
+                                                <label class="custom-control-label" for="directbank">Direct Bank Transfer</label>
+                                            </div>
+                                        </div>
+                                        <div class="payment-method-details" data-method="bank">
+                                            <p>Make your payment directly into our bank account. Please use your Order ID as the payment reference.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="summary-footer-area">
+                                        <div class="custom-control custom-checkbox mb-14">
+                                            <input type="checkbox" class="custom-control-input" id="terms" required />
+                                            <label class="custom-control-label" for="terms">I have read and agree to the website <a href="#">terms and conditions.</a></label>
+                                        </div>
+                                        <button type="submit" class="check-btn sqr-btn" id="place-order-btn">Place Order</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- checkout main wrapper end -->
+
+    <!-- M-Pesa Payment Modal -->
+    <div class="modal fade" id="mpesaModal" tabindex="-1" role="dialog" aria-labelledby="mpesaModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mpesaModalLabel">M-Pesa Payment</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="mpesa-loading" style="display: none;">
+                        <div class="spinner-border" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <p class="mt-2">Processing payment...</p>
+                    </div>
+                    <div id="mpesa-message">
+                        <p>Please check your phone and enter your M-Pesa PIN to complete the payment.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="retry-payment" style="display: none;">Retry Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if jQuery is loaded, if not, use vanilla JavaScript
+    if (typeof $ === 'undefined') {
+        console.warn('jQuery not loaded, using vanilla JavaScript');
+        
+        // Toggle password field
+        const createPwdCheckbox = document.getElementById('create_pwd');
+        const passwordField = document.getElementById('password-field');
+        if (createPwdCheckbox && passwordField) {
+            createPwdCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    passwordField.style.display = 'block';
+                    const pwdInput = document.getElementById('pwd');
+                    if (pwdInput) pwdInput.required = true;
+                } else {
+                    passwordField.style.display = 'none';
+                    const pwdInput = document.getElementById('pwd');
+                    if (pwdInput) pwdInput.required = false;
+                }
+            });
+        }
+
+        // Toggle shipping fields
+        const shipToDifferentCheckbox = document.getElementById('ship_to_different');
+        const shippingFields = document.getElementById('shipping-fields');
+        if (shipToDifferentCheckbox && shippingFields) {
+            shipToDifferentCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    shippingFields.style.display = 'block';
+                    const requiredShippingFields = shippingFields.querySelectorAll('input[required]');
+                    requiredShippingFields.forEach(field => field.required = true);
+                } else {
+                    shippingFields.style.display = 'none';
+                    const shippingInputs = shippingFields.querySelectorAll('input');
+                    shippingInputs.forEach(field => field.required = false);
+                }
+            });
+        }
+
+        // Form validation
+        const checkoutForm = document.getElementById('checkout-form');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function(e) {
+                // Clear previous error states
+                const invalidFields = this.querySelectorAll('.is-invalid');
+                invalidFields.forEach(field => field.classList.remove('is-invalid'));
+
+                // Check required fields
+                const requiredFields = this.querySelectorAll('input[required], select[required]');
+                let hasErrors = false;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        hasErrors = true;
+                    }
+                });
+
+                // Check terms checkbox
+                const termsCheckbox = document.getElementById('terms');
+                if (termsCheckbox && !termsCheckbox.checked) {
+                    alert('Please accept the terms and conditions');
+                    hasErrors = true;
+                }
+
+                if (hasErrors) {
+                    e.preventDefault();
+                    const firstInvalid = this.querySelector('.is-invalid');
+                    if (firstInvalid) {
+                        firstInvalid.focus();
+                    }
+                    return false;
+                }
+
+                // Handle M-Pesa payment
+                const paymentMethod = this.querySelector('input[name="paymentmethod"]:checked');
+                if (paymentMethod && paymentMethod.value === 'mpesa') {
+                    e.preventDefault();
+                    handleMpesaPayment();
+                }
+            });
+        }
+
+        function handleMpesaPayment() {
+            const modal = document.getElementById('mpesaModal');
+            const loading = document.getElementById('mpesa-loading');
+            const message = document.getElementById('mpesa-message');
+            
+            // Show modal and loading
+            if (modal) {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+            }
+            if (loading) loading.style.display = 'block';
+            if (message) message.innerHTML = '<p class="text-info">Sending STK Push to your phone...</p>';
+
+            // Submit form via fetch
+            const form = document.getElementById('checkout-form');
+            const formData = new FormData(form);
+
+            fetch(form.action || window.location.pathname, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (loading) loading.style.display = 'none';
+                if (data.success) {
+                    if (message) {
+                        message.innerHTML = '<p class="text-success">' + data.message + '</p>';
+                    }
+                    if (data.checkout_request_id) {
+                        checkPaymentStatus(data.checkout_request_id);
+                    }
+                } else {
+                    if (message) {
+                        message.innerHTML = '<p class="text-danger">' + (data.message || 'Payment failed. Please try again.') + '</p>';
+                    }
+                }
+            })
+            .catch(error => {
+                if (loading) loading.style.display = 'none';
+                if (message) {
+                    message.innerHTML = '<p class="text-danger">An error occurred. Please try again.</p>';
+                }
+                console.error('Error:', error);
+            });
+        }
+
+        function checkPaymentStatus(checkoutRequestId) {
+            let pollCount = 0;
+            const maxPolls = 60; // Poll for 5 minutes (60 * 5 seconds)
+            const message = document.getElementById('mpesa-message');
+
+            function pollStatus() {
+                pollCount++;
+                
+                fetch('/check-payment-status/?checkout_request_id=' + checkoutRequestId)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Payment status check:', data);
+                    
+                    if (data.status === 'SUCCESS') {
+                        // Payment successful
+                        if (message) {
+                            message.innerHTML = '<p class="text-success">Payment completed successfully! Redirecting...</p>';
+                        }
+                        setTimeout(function() {
+                            window.location.href = data.redirect_url || '/order-confirmation/' + data.order_number + '/';
+                        }, 2000);
+                        
+                    } else if (data.status === 'FAILED') {
+                        // Payment failed
+                        if (message) {
+                            message.innerHTML = '<p class="text-danger">' + (data.message || 'Payment failed. Please try again.') + '</p>';
+                        }
+                        setTimeout(function() {
+                            if (data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            } else {
+                                location.reload(); // Reload checkout page
+                            }
+                        }, 3000);
+                        
+                    } else if (data.status === 'PENDING') {
+                        // Still pending, update message and continue polling
+                        if (message) {
+                            message.innerHTML = '<p class="text-info">' + (data.message || 'Please complete the payment on your phone...') + '</p>';
+                        }
+                        
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000); // Check again in 5 seconds
+                        } else {
+                            // Timeout
+                            if (message) {
+                                message.innerHTML = '<p class="text-warning">Payment verification timed out. Please check your M-Pesa messages or contact support if money was deducted.</p>';
+                            }
+                        }
+                        
+                    } else {
+                        // Unknown status, treat as pending but with caution
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            if (message) {
+                                message.innerHTML = '<p class="text-warning">Unable to verify payment status. Please contact support.</p>';
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check error:', error);
+                    if (pollCount < maxPolls) {
+                        setTimeout(pollStatus, 5000); // Retry
+                    } else {
+                        if (message) {
+                            message.innerHTML = '<p class="text-danger">Unable to verify payment status. Please contact support.</p>';
+                        }
+                    }
+                });
+            }
+            
+            // Start polling
+            pollStatus();
+        }
+
+    } else {
+        // jQuery is available, use it
+        $('#create_pwd').change(function() {
+            if ($(this).is(':checked')) {
+                $('#password-field').slideDown();
+                $('#pwd').prop('required', true);
+            } else {
+                $('#password-field').slideUp();
+                $('#pwd').prop('required', false);
+            }
+        });
+
+        $('#ship_to_different').change(function() {
+            if ($(this).is(':checked')) {
+                $('#shipping-fields').slideDown();
+                $('#shipping-fields input[data-required="true"]').prop('required', true);
+            } else {
+                $('#shipping-fields').slideUp();
+                $('#shipping-fields input').prop('required', false);
+            }
+        });
+
+        $('#checkout-form').submit(function(e) {
+            var paymentMethod = $('input[name="paymentmethod"]:checked').val();
+            
+            if (paymentMethod === 'mpesa') {
+                e.preventDefault();
+                $('#mpesa-loading').show();
+                $('#mpesaModal').modal('show');
+                $('#mpesa-message').html('<p class="text-info">Sending STK Push to your phone...</p>');
+                
+                $.ajax({
+                    url: $(this).attr('action') || window.location.pathname,
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        $('#mpesa-loading').hide();
+                        if (response.success) {
+                            $('#mpesa-message').html('<p class="text-success">' + response.message + '</p>');
+                            if (response.checkout_request_id) {
+                                checkPaymentStatusJQuery(response.checkout_request_id);
+                            }
+                        } else {
+                            $('#mpesa-message').html('<p class="text-danger">' + (response.message || 'Payment failed. Please try again.') + '</p>');
+                        }
+                    },
+                    error: function() {
+                        $('#mpesa-loading').hide();
+                        $('#mpesa-message').html('<p class="text-danger">An error occurred. Please try again.</p>');
+                    }
+                });
+            }
+        });
+
+        function checkPaymentStatusJQuery(checkoutRequestId) {
+            let pollCount = 0;
+            const maxPolls = 60;
+
+            function pollStatus() {
+                pollCount++;
+                
+                $.get('/check-payment-status/', {
+                    checkout_request_id: checkoutRequestId
+                })
+                .done(function(response) {
+                    console.log('Payment status check:', response);
+                    
+                    if (response.status === 'SUCCESS') {
+                        $('#mpesa-message').html('<p class="text-success">Payment completed successfully! Redirecting...</p>');
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url || '/order-confirmation/' + response.order_number + '/';
+                        }, 2000);
+                        
+                    } else if (response.status === 'FAILED') {
+                        $('#mpesa-message').html('<p class="text-danger">' + (response.message || 'Payment failed. Please try again.') + '</p>');
+                        setTimeout(function() {
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                location.reload();
+                            }
+                        }, 3000);
+                        
+                    } else if (response.status === 'PENDING') {
+                        $('#mpesa-message').html('<p class="text-info">' + (response.message || 'Please complete the payment on your phone...') + '</p>');
+                        
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            $('#mpesa-message').html('<p class="text-warning">Payment verification timed out. Please check your M-Pesa messages or contact support if money was deducted.</p>');
+                        }
+                    } else {
+                        if (pollCount < maxPolls) {
+                            setTimeout(pollStatus, 5000);
+                        } else {
+                            $('#mpesa-message').html('<p class="text-warning">Unable to verify payment status. Please contact support.</p>');
+                        }
+                    }
+                })
+                .fail(function() {
+                    if (pollCount < maxPolls) {
+                        setTimeout(pollStatus, 5000);
+                    } else {
+                        $('#mpesa-message').html('<p class="text-danger">Unable to verify payment status. Please contact support.</p>');
+                    }
+                });
+            }
+            
+            pollStatus();
+        }
+    }
+});
+</script>
+{% endblock %}
