@@ -244,8 +244,8 @@ def register_view(request):
         
         if not password:
             errors.append('Password is required')
-        elif len(password) < 8:
-            errors.append('Password must be at least 8 characters long')
+        elif len(password) < 6:
+            errors.append('Password must be at least 6 characters long')
         
         if password != password_confirm:
             errors.append('Passwords do not match')
@@ -279,7 +279,8 @@ def register_view(request):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
-                password=make_password(password)
+                password=make_password(password),
+                is_verified=True,
             )
             
             # Auto-login after registration
@@ -287,7 +288,7 @@ def register_view(request):
             if user:
                 login(request, user)
                 messages.success(request, f'Welcome {first_name}! Your account has been created successfully.')
-                return redirect('dashboard')  # Change to your desired redirect URL
+                return redirect('account_profile')  
             else:
                 messages.success(request, 'Account created successfully! Please log in.')
                 return redirect('login')

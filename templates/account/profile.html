@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .buy-btn {
+       border-radius: 5px;
+       color: #d8373e;
+       background-color: #ffff;
+       border-color: #d8373e;
+       margin: 5px 5px 5px 5px;
+       padding:  5px 5px 5px 5px;
+    }
+
+    .buy-btn:hover{
+        background: #d8373e;
+        color:  #ffff ;
+        cursor: pointer;
+    }
+</style>    
 <!-- breadcrumb area start -->
 <div class="breadcrumb-area">
     <div class="container">
@@ -19,6 +35,18 @@
     </div>
 </div>
 <!-- breadcrumb area end -->
+
+<!-- Display Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
 <!-- account profile wrapper start -->
 <div class="order-confirmation-wrapper">
@@ -116,7 +144,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="mt-20">
-                                                    <button type="submit" class="buy-btn">
+                                                    <button type="submit"  class="buy-btn">
                                                         Update Profile <i class="fa fa-save"></i>
                                                     </button>
                                                 </div>
@@ -190,33 +218,6 @@
                 </div>
                 <!-- profile details section end -->
 
-                <!-- action buttons start -->
-                <div class="order-actions mt-34">
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="action-buttons text-center">
-                                <div class="quantity-cart-box d-flex align-items-center justify-content-center">
-                                    <div class="action_link">
-                                        <a class="buy-btn" href="{% url 'my_orders' %}">
-                                            View My Orders <i class="fa fa-list"></i>
-                                        </a>
-                                    </div>
-                                    <div class="action_link ml-10">
-                                        <a class="buy-btn" href="{% url 'index' %}">
-                                            Continue Shopping <i class="fa fa-shopping-cart"></i>
-                                        </a>
-                                    </div>
-                                    <div class="action_link ml-10">
-                                        <a class="buy-btn" href="{% url 'contact_us' %}">
-                                            Contact Support <i class="fa fa-envelope"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- action buttons end -->
             </div>
 
             <!-- sidebar start -->

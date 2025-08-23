@@ -72,7 +72,7 @@
                                                name="password" 
                                                placeholder="Enter your Password" 
                                                required 
-                                               minlength="8" 
+                                               minlength="6" 
                                                id="password" />
                                     </div>
                                 </div>
@@ -82,7 +82,7 @@
                                                name="password_confirm" 
                                                placeholder="Repeat your Password" 
                                                required 
-                                               minlength="8" 
+                                               minlength="6" 
                                                id="password_confirm" />
                                     </div>
                                 </div>
@@ -186,8 +186,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let strength = 0;
         let feedback = [];
         
-        if (password.length >= 8) strength += 1;
-        else feedback.push('at least 8 characters');
+        if (password.length >= 6) strength += 1;
+        else feedback.push('at least 6 characters');
         
         if (/[a-z]/.test(password)) strength += 1;
         else feedback.push('lowercase letter');
@@ -273,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Password validation
-        if (password.length < 8) {
-            alert('Password must be at least 8 characters long.');
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters long.');
             e.preventDefault();
             return false;
         }

@@ -30,14 +30,7 @@ class BillingAddressForm(forms.Form):
         })
     )
     
-    company = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Company Name'
-        })
-    )
+    
     
     country = forms.CharField(
         max_length=100,
