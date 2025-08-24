@@ -1142,8 +1142,8 @@ class CheckoutView(View):
             response = mpesa_service.stk_push(
                 phone_number=phone_number,
                 amount=int(order.total_amount),
-                account_reference=order.order_number,
-                transaction_desc=f"Payment for order {order.order_number}"
+                account_reference="Galio",
+                transaction_desc=f"Payment for {order.order_number}"
             )
             
             logger.info(f"M-Pesa STK Push response: {response}")
@@ -1211,6 +1211,15 @@ class CheckoutView(View):
 
 
 # Keep the rest of your existing code (MpesaService, callback, etc.) unchanged
+import json
+import base64
+import requests
+import logging
+from datetime import datetime
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
 class MpesaService:
     def __init__(self):
         self.consumer_key = getattr(settings, 'MPESA_CONSUMER_KEY', '')
@@ -1223,6 +1232,10 @@ class MpesaService:
         
         if not all([self.consumer_key, self.consumer_secret, self.business_shortcode, self.passkey]):
             logger.error("Missing M-Pesa configuration in settings")
+            logger.error(f"Consumer Key: {'✓' if self.consumer_key else '✗'}")
+            logger.error(f"Consumer Secret: {'✓' if self.consumer_secret else '✗'}")
+            logger.error(f"Business Shortcode: {'✓' if self.business_shortcode else '✗'}")
+            logger.error(f"Passkey: {'✓' if self.passkey else '✗'}")
             raise ValueError("M-Pesa configuration is incomplete. Check your settings.")
         
         if self.environment == 'sandbox':
@@ -1233,7 +1246,7 @@ class MpesaService:
         logger.info(f"M-Pesa base URL: {self.base_url}")
     
     def get_access_token(self):
-        """Get M-Pesa access token"""
+        """Get M-Pesa access token with enhanced error handling"""
         logger.info("Requesting M-Pesa access token")
         
         try:
@@ -1249,20 +1262,46 @@ class MpesaService:
                 'Content-Type': 'application/json'
             }
             
-            logger.debug(f"Token request headers: {headers}")
+            logger.debug(f"Token request headers (auth hidden): {{'Content-Type': 'application/json', 'Authorization': 'Basic ***'}}")
+            logger.info(f"Using consumer key: {self.consumer_key[:10]}..." if len(self.consumer_key) > 10 else f"Consumer key: {self.consumer_key}")
             
             response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
             
-            token_data = response.json()
+            logger.info(f"Token response status: {response.status_code}")
+            logger.debug(f"Token response headers: {dict(response.headers)}")
+            
+            if response.status_code != 200:
+                logger.error(f"Token request failed with status {response.status_code}")
+                logger.error(f"Response body: {response.text}")
+                raise Exception(f"Token request failed: HTTP {response.status_code} - {response.text}")
+            
+            try:
+                token_data = response.json()
+                logger.debug(f"Token response data: {token_data}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in token response: {response.text}")
+                raise Exception(f"Invalid JSON response from token endpoint: {str(e)}")
+            
+            access_token = token_data.get('access_token')
+            
+            if not access_token:
+                logger.error(f"No access token in response: {token_data}")
+                raise Exception("No access token received from API")
+            
             logger.info("Access token obtained successfully")
-            logger.debug(f"Token response: {token_data}")
+            return access_token
             
-            return token_data.get('access_token')
-            
+        except requests.exceptions.Timeout:
+            logger.error("Token request timed out")
+            raise Exception("Token request timed out")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error during token request: {str(e)}")
+            raise Exception(f"Connection error: {str(e)}")
         except requests.exceptions.RequestException as e:
-            logger.exception(f"Failed to get access token: {str(e)}")
-            raise Exception(f"Failed to get access token: {str(e)}")
+            logger.error(f"Request exception during token request: {str(e)}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Error response body: {e.response.text}")
+            raise Exception(f"Token request failed: {str(e)}")
         except Exception as e:
             logger.exception(f"Unexpected error getting access token: {str(e)}")
             raise Exception(f"Failed to get access token: {str(e)}")
@@ -1274,18 +1313,35 @@ class MpesaService:
         password = base64.b64encode(password_string.encode()).decode()
         
         logger.debug(f"Generated timestamp: {timestamp}")
-        logger.debug(f"Password string: {password_string}")
+        logger.debug(f"Password string length: {len(password_string)}")
+        logger.debug(f"Generated password length: {len(password)}")
         
         return password, timestamp
     
     def stk_push(self, phone_number, amount, account_reference, transaction_desc):
-        """Initiate STK Push"""
+        """Initiate STK Push with comprehensive error handling"""
         logger.info(f"Starting STK Push - Phone: {phone_number}, Amount: {amount}, Reference: {account_reference}")
         
+        # Validate inputs
+        if not phone_number:
+            raise Exception("Phone number is required")
+        if not amount or amount <= 0:
+            raise Exception("Valid amount is required")
+        if not account_reference:
+            raise Exception("Account reference is required")
+        if not transaction_desc:
+            raise Exception("Transaction description is required")
+        
         try:
+            # Get access token
             access_token = self.get_access_token()
+            if not access_token:
+                raise Exception("Failed to get access token")
+            
+            # Generate password
             password, timestamp = self.generate_password()
             
+            # Prepare request
             url = f"{self.base_url}/mpesa/stkpush/v1/processrequest"
             logger.debug(f"STK Push URL: {url}")
             
@@ -1293,6 +1349,14 @@ class MpesaService:
                 'Authorization': f'Bearer {access_token}',
                 'Content-Type': 'application/json'
             }
+            
+            # Ensure amount is integer
+            amount = int(float(amount))
+            
+            # Get callback URL
+            callback_url = getattr(settings, 'MPESA_CALLBACK_URL', '')
+            if not callback_url:
+                logger.warning("No callback URL configured")
             
             payload = {
                 'BusinessShortCode': self.business_shortcode,
@@ -1303,26 +1367,86 @@ class MpesaService:
                 'PartyA': phone_number,
                 'PartyB': self.business_shortcode,
                 'PhoneNumber': phone_number,
-                'CallBackURL': getattr(settings, 'MPESA_CALLBACK_URL', ''),
+                'CallBackURL': callback_url,
                 'AccountReference': account_reference,
                 'TransactionDesc': transaction_desc
             }
             
-            logger.info(f"STK Push payload: {payload}")
+            # Log payload (hiding sensitive data)
+            safe_payload = payload.copy()
+            safe_payload['Password'] = '***'
+            logger.info(f"STK Push payload: {json.dumps(safe_payload, indent=2)}")
+            logger.debug(f"Request headers (token hidden): {{'Content-Type': 'application/json', 'Authorization': 'Bearer ***'}}")
             
+            # Validate payload
+            required_fields = ['BusinessShortCode', 'Password', 'Timestamp', 'TransactionType', 
+                             'Amount', 'PartyA', 'PartyB', 'PhoneNumber', 'CallBackURL', 
+                             'AccountReference', 'TransactionDesc']
+            
+            for field in required_fields:
+                if not payload.get(field):
+                    logger.error(f"Missing required field: {field}")
+                    raise Exception(f"Missing required field: {field}")
+            
+            # Make request
+            logger.info("Sending STK Push request...")
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
             
-            response_data = response.json()
-            logger.info(f"STK Push response: {response_data}")
+            # Log response details
+            logger.info(f"STK Push response status: {response.status_code}")
+            logger.debug(f"Response headers: {dict(response.headers)}")
+            logger.info(f"Response body: {response.text}")
             
+            # Handle non-200 responses
+            if response.status_code != 200:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    if 'errorMessage' in error_data:
+                        error_msg += f" - {error_data['errorMessage']}"
+                    elif 'ResponseDescription' in error_data:
+                        error_msg += f" - {error_data['ResponseDescription']}"
+                    else:
+                        error_msg += f" - {response.text}"
+                except:
+                    error_msg += f" - {response.text}"
+                
+                logger.error(f"STK Push failed: {error_msg}")
+                raise Exception(f"STK Push API error: {error_msg}")
+            
+            # Parse response
+            try:
+                response_data = response.json()
+                logger.info(f"STK Push response parsed: {response_data}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in STK Push response: {response.text}")
+                raise Exception(f"Invalid JSON response from STK Push API: {str(e)}")
+            
+            # Check response code
+            response_code = response_data.get('ResponseCode')
+            if response_code != '0':
+                error_desc = response_data.get('ResponseDescription', 'Unknown error')
+                logger.error(f"STK Push failed - Code: {response_code}, Description: {error_desc}")
+                raise Exception(f"STK Push failed: {error_desc} (Code: {response_code})")
+            
+            logger.info("STK Push completed successfully")
             return response_data
             
+        except requests.exceptions.Timeout:
+            logger.error("STK Push request timed out")
+            raise Exception("STK Push request timed out")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error during STK Push: {str(e)}")
+            raise Exception(f"Connection error: {str(e)}")
         except requests.exceptions.RequestException as e:
-            logger.exception(f"STK Push request failed: {str(e)}")
-            raise Exception(f"STK Push failed: {str(e)}")
+            logger.error(f"Request exception during STK Push: {str(e)}")
+            error_details = ""
+            if hasattr(e, 'response') and e.response is not None:
+                error_details = f" - Response: {e.response.text}"
+                logger.error(f"Error response body: {e.response.text}")
+            raise Exception(f"STK Push request failed: {str(e)}{error_details}")
         except Exception as e:
-            logger.exception(f"STK Push unexpected error: {str(e)}")
+            logger.exception(f"Unexpected error during STK Push: {str(e)}")
             raise Exception(f"STK Push failed: {str(e)}")
 
 

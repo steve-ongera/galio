@@ -446,6 +446,9 @@ class Coupon(models.Model):
                 self.valid_from <= now <= self.valid_to and
                 (self.usage_limit is None or self.used_count < self.usage_limit))
 
+import random
+import string
+from django.utils import timezone
 
 class Order(models.Model):
     """Customer orders"""
@@ -494,9 +497,8 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            super().save(*args, **kwargs)  # Save first to get self.id
-            self.order_number = f"ORD-{timezone.now().strftime('%Y%m%d')}-{self.id:04d}"
-            kwargs["force_insert"] = False  # avoid duplicate insert
+            # Generate a random 9-character alphanumeric string
+            self.order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9))
         super().save(*args, **kwargs)
 
 
