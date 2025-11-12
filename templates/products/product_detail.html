@@ -1,6 +1,86 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block content %}
+
+<style>
+/* Product large slider images - fixed size */
+.pro-large-img {
+    height: 500px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+}
+
+.pro-large-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Product thumbnail slider - fixed size */
+.pro-nav-thumb {
+    height: 100px;
+    width: 100px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    cursor: pointer;
+}
+
+.pro-nav-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Related products - fixed size */
+.related-products-area .product-item .product-thumb {
+    height: 250px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+}
+
+.related-products-area .product-item .product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Related products title truncation */
+.related-products-area .product-content h4 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 10px;
+}
+
+.related-products-area .product-content h4 a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* Product main title truncation (if very long) */
+.product-details-des h3 {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Stock status styling */
+.availability span {
+    font-weight: 600;
+}
+</style>
+
 <!-- breadcrumb area start -->
 <div class="breadcrumb-area">
     <div class="container">
@@ -9,10 +89,10 @@
                 <div class="breadcrumb-wrap">
                     <nav aria-label="breadcrumb">
                         <ul class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item"><a href="#">Shop</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'product_list'%}">Shop</a></li>
                             {% for category in categories %}
-                            <li class="breadcrumb-item"><a href="#">{{ category.name }}</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'category_products' category.slug %}">{{ category.name }}</a></li>
                             {% endfor %}
                             <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
                         </ul>
@@ -62,7 +142,7 @@
                                     </div>
                                 </div>
                                 <div class="customer-rev">
-                                    <a href="#">({{ review_count }} customer review)</a>
+                                    <a href="#tab_three" data-toggle="tab">({{ review_count }} customer review)</a>
                                 </div>
                                 <div class="availability mt-10">
                                     <h5>Availability:</h5>
@@ -76,13 +156,15 @@
                                 </div>
                                 <div class="pricebox">
                                     {% if product.is_on_sale %}
-                                    <span class="regular-price">ksh{{ product.compare_price }}</span>
-                                    <span class="old-price"><del>ksh{{ product.price }}</del></span>
+                                    <span class="regular-price">ksh{{ product.price }}</span>
+                                    <span class="old-price"><del>ksh{{ product.compare_price }}</del></span>
                                     {% else %}
                                     <span class="regular-price">ksh{{ product.price }}</span>
                                     {% endif %}
                                 </div>
                                 <p>{{ product.short_description }}</p>
+                                
+                                {% if product.is_in_stock %}
                                 <div class="quantity-cart-box d-flex align-items-center">
                                     <div class="quantity">
                                         <div class="pro-qty"><input type="text" value="1"></div>
@@ -92,8 +174,15 @@
                                             add to cart <i class="fa fa-shopping-cart"></i>
                                         </a>
                                     </div>
-
                                 </div>
+                                {% else %}
+                                <div class="out-of-stock-btn">
+                                    <button class="buy-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
+                                        Out of Stock <i class="fa fa-ban"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                                
                                 <div class="useful-links mt-20">
                                     <a href="#" data-toggle="tooltip" data-placement="top" title="Compare"><i class="fa fa-refresh"></i>compare</a>
                                     <a href="#" data-toggle="tooltip" data-placement="top" title="Wishlist"><i class="fa fa-heart-o"></i>wishlist</a>
@@ -123,7 +212,7 @@
                                         <a data-toggle="tab" href="#tab_two">information</a>
                                     </li>
                                     <li>
-                                        <a data-toggle="tab" href="#tab_three">reviews</a>
+                                        <a data-toggle="tab" href="#tab_three">reviews ({{ review_count }})</a>
                                     </li>
                                 </ul>
                                 <div class="tab-content reviews-tab">
@@ -135,10 +224,13 @@
                                     <div class="tab-pane fade" id="tab_two">
                                         <table class="table table-bordered">
                                             <tbody>
+                                                {% if product.weight %}
                                                 <tr>
                                                     <td>Weight</td>
                                                     <td>{{ product.weight }} kg</td>
                                                 </tr>
+                                                {% endif %}
+                                                {% if product.dimensions_length and product.dimensions_width and product.dimensions_height %}
                                                 <tr>
                                                     <td>Dimensions</td>
                                                     <td>
@@ -147,20 +239,38 @@
                                                         {{ product.dimensions_height }} cm
                                                     </td>
                                                 </tr>
+                                                {% endif %}
                                                 <tr>
                                                     <td>SKU</td>
                                                     <td>{{ product.sku }}</td>
                                                 </tr>
+                                                {% if product.brand %}
+                                                <tr>
+                                                    <td>Brand</td>
+                                                    <td>{{ product.brand.name }}</td>
+                                                </tr>
+                                                {% endif %}
+                                                {% if product.category %}
+                                                <tr>
+                                                    <td>Category</td>
+                                                    <td>{{ product.category.name }}</td>
+                                                </tr>
+                                                {% endif %}
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="tab-pane fade" id="tab_three">
-                                        <form action="#" class="review-form">
+                                        <form action="#" method="post" class="review-form">
+                                            {% csrf_token %}
                                             <h5>{{ review_count }} review(s) for {{ product.name }}</h5>
                                             {% for review in reviews %}
                                             <div class="total-reviews">
                                                 <div class="rev-avatar">
+                                                    {% if review.user.avatar %}
                                                     <img src="{{ review.user.avatar.url }}" alt="{{ review.user.username }}">
+                                                    {% else %}
+                                                    <img src="https://via.placeholder.com/80x80" alt="{{ review.user.username }}">
+                                                    {% endif %}
                                                 </div>
                                                 <div class="review-box">
                                                     <div class="ratings">
@@ -178,13 +288,15 @@
                                                     <p>{{ review.content }}</p>
                                                 </div>
                                             </div>
+                                            {% empty %}
+                                            <p>No reviews yet. Be the first to review this product!</p>
                                             {% endfor %}
                                             
                                             {% if request.user.is_authenticated %}
-                                            <div class="form-group row">
+                                            <div class="form-group row mt-30">
                                                 <div class="col">
                                                     <label class="col-form-label"><span class="text-danger">*</span> Your Review</label>
-                                                    <textarea class="form-control" required></textarea>
+                                                    <textarea class="form-control" name="content" required></textarea>
                                                     <div class="help-block pt-10"><span class="text-danger">Note:</span> HTML is not translated!</div>
                                                 </div>
                                             </div>
@@ -205,10 +317,10 @@
                                                 </div>
                                             </div>
                                             <div class="buttons">
-                                                <button class="sqr-btn" type="submit">Continue</button>
+                                                <button class="sqr-btn" type="submit">Submit Review</button>
                                             </div>
                                             {% else %}
-                                            <p>Please <a href="#">login</a> to leave a review.</p>
+                                            <p>Please <a href="{% url 'login' %}">login</a> to leave a review.</p>
                                             {% endif %}
                                         </form>
                                     </div>
@@ -220,6 +332,7 @@
                 <!-- product details reviews end --> 
 
                 <!-- related products area start -->
+                {% if related_products %}
                 <div class="related-products-area mt-34">
                     <div class="section-title mb-30">
                         <div class="title-icon">
@@ -233,12 +346,20 @@
                             <div class="product-thumb">
                                 <a href="{{ related.get_absolute_url }}">
                                     {% with related.images.all|first as first_image %}
-                                    <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% if first_image %}
+                                        <img src="{{ first_image.image.url }}" class="img-pri" alt="{{ first_image.alt_text }}">
+                                        {% else %}
+                                        <img src="{% static 'assets/img/product/default-product.jpg' %}" class="img-pri" alt="{{ related.name }}">
+                                        {% endif %}
                                     {% endwith %}
                                 </a>
                                 {% if related.is_featured %}
                                 <div class="product-label">
                                     <span>hot</span>
+                                </div>
+                                {% elif related.is_on_sale %}
+                                <div class="product-label">
+                                    <span>-{{ related.discount_percentage }}%</span>
                                 </div>
                                 {% endif %}
                                 <div class="product-action-link">
@@ -261,9 +382,11 @@
                             <div class="product-content">
                                 <h4><a href="{{ related.get_absolute_url }}">{{ related.name }}</a></h4>
                                 <div class="pricebox">
+                                    {% if related.is_on_sale %}
                                     <span class="regular-price">ksh{{ related.price }}</span>
-                                    {% if related.compare_price %}
                                     <span class="old-price"><del>ksh{{ related.compare_price }}</del></span>
+                                    {% else %}
+                                    <span class="regular-price">ksh{{ related.price }}</span>
                                     {% endif %}
                                     <div class="ratings">
                                         {% for i in "12345" %}
@@ -283,6 +406,7 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% endif %}
                 <!-- related products area end -->
             </div>
 
@@ -290,6 +414,7 @@
             <div class="col-lg-3">
                 <div class="shop-sidebar-wrap fix mt-md-22 mt-sm-22">
                     <!-- featured category start -->
+                    {% if related_products %}
                     <div class="sidebar-widget mb-22">
                         <div class="section-title-2 d-flex justify-content-between mb-28">
                             <h3>featured</h3>
@@ -302,19 +427,27 @@
                                     <div class="category-thumb">
                                         <a href="{{ featured.get_absolute_url }}">
                                             {% with featured.images.all|first as first_image %}
-                                            <img src="{{ first_image.image.url }}" alt="{{ featured.name }}">
+                                                {% if first_image %}
+                                                <img src="{{ first_image.image.url }}" alt="{{ featured.name }}">
+                                                {% else %}
+                                                <img src="{% static 'assets/img/product/default-product.jpg' %}" alt="{{ featured.name }}">
+                                                {% endif %}
                                             {% endwith %}
                                         </a>
                                     </div>
                                     <div class="category-content">
                                         <h4><a href="{{ featured.get_absolute_url }}">{{ featured.name }}</a></h4>
                                         <div class="price-box">
+                                            {% if featured.is_on_sale %}
                                             <div class="regular-price">
                                                 ksh{{ featured.price }}
                                             </div>
-                                            {% if featured.compare_price %}
                                             <div class="old-price">
                                                 <del>ksh{{ featured.compare_price }}</del>
+                                            </div>
+                                            {% else %}
+                                            <div class="regular-price">
+                                                ksh{{ featured.price }}
                                             </div>
                                             {% endif %}
                                         </div>
@@ -336,6 +469,7 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                     <!-- featured category end -->
 
                     <!-- manufacturer start -->
@@ -348,7 +482,7 @@
                             <ul>
                                 <li>
                                     <i class="fa fa-angle-right"></i>
-                                    <a href="#">{{ product.brand.name }}</a>
+                                    <a href="{% url 'brand_products' product.brand.slug %}">{{ product.brand.name }}</a>
                                     <span>({{ product.brand.product.count }})</span>
                                 </li>
                             </ul>
@@ -365,9 +499,17 @@
                         <div class="sidebar-widget-body">
                             <div class="product-tag">
                                 <a href="#">product</a>
-                                <a href="#">{{ product.category.name }}</a>
+                                {% if product.category %}
+                                <a href="{% url 'category_products' product.category.slug %}">{{ product.category.name }}</a>
+                                {% endif %}
                                 {% if product.brand %}
-                                <a href="#">{{ product.brand.name }}</a>
+                                <a href="{% url 'brand_products' product.brand.slug %}">{{ product.brand.name }}</a>
+                                {% endif %}
+                                {% if product.is_featured %}
+                                <a href="#">featured</a>
+                                {% endif %}
+                                {% if product.is_on_sale %}
+                                <a href="#">sale</a>
                                 {% endif %}
                             </div>
                         </div>
