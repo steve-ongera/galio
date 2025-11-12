@@ -1,6 +1,103 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
+
+<style>
+/* Product image container - fixed size */
+.product-item .product-thumb {
+    height: 280px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+}
+
+.product-item .product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Product name truncation */
+.product-item .product-content h4 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 10px;
+}
+
+.product-item .product-content h4 a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Hide list view by default */
+.product-list-item {
+    display: none;
+}
+
+/* Show grid view by default */
+.product-item {
+    display: block;
+}
+
+/* When list view is active */
+.shop-product-wrap.list-view .product-item {
+    display: none;
+}
+
+.shop-product-wrap.list-view .product-list-item {
+    display: block;
+}
+
+/* List view image size */
+.product-list-item .product-thumb {
+    height: 200px;
+    width: 200px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    flex-shrink: 0;
+}
+
+.product-list-item .product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* List view content truncation */
+.product-list-item .product-list-content h3 a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Stock status styling */
+.stock-status {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.stock-status.out-of-stock {
+    color: #dc3545;
+}
+
+.stock-status.low-stock {
+    color: #ff9800;
+}
+
+.stock-status.in-stock {
+    color: #28a745;
+}
+</style>
+
 <!-- breadcrumb area start -->
 <div class="breadcrumb-area">
     <div class="container">
@@ -104,7 +201,7 @@
                     </div>
                     <!-- pricing filter end -->
 
-                    <!-- product size start -->
+                    <!-- product status start -->
                     <div class="sidebar-widget mb-30">
                         <div class="sidebar-title mb-10">
                             <h3>product status</h3>
@@ -168,8 +265,8 @@
                             <div class="col-lg-7 col-md-6">
                                 <div class="top-bar-left">
                                     <div class="product-view-mode mr-70 mr-sm-0">
-                                        <a href="#" data-target="grid"><i class="fa fa-th"></i></a>
-                                        <a class="active" href="#" data-target="list"><i class="fa fa-list"></i></a>
+                                        <a class="active" href="#" data-target="grid"><i class="fa fa-th"></i></a>
+                                        <a href="#" data-target="list"><i class="fa fa-list"></i></a>
                                     </div>
                                     <div class="product-amount">
                                         <p>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_products }} results</p>
@@ -199,7 +296,7 @@
                     <!-- shop product top wrap end -->
 
                     <!-- product item start -->
-                    <div class="shop-product-wrap list row">
+                    <div class="shop-product-wrap grid row">
                         {% for product in products %}
                         <div class="col-lg-4 col-md-6 col-sm-6">
                             <!-- product single grid item start -->
@@ -416,4 +513,32 @@
     </div>
 </div>
 <!-- page wrapper end -->
+
+<script>
+// Toggle between grid and list view
+document.addEventListener('DOMContentLoaded', function() {
+    const gridBtn = document.querySelector('[data-target="grid"]');
+    const listBtn = document.querySelector('[data-target="list"]');
+    const productWrap = document.querySelector('.shop-product-wrap');
+    
+    if (gridBtn && listBtn && productWrap) {
+        gridBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            productWrap.classList.remove('list-view');
+            productWrap.classList.add('grid');
+            gridBtn.classList.add('active');
+            listBtn.classList.remove('active');
+        });
+        
+        listBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            productWrap.classList.add('list-view');
+            productWrap.classList.remove('grid');
+            listBtn.classList.remove('active');
+            gridBtn.classList.add('active');
+        });
+    }
+});
+</script>
+
 {% endblock %}
