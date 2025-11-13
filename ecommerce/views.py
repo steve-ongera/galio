@@ -1134,7 +1134,7 @@ class CheckoutView(View):
         return None
     
     def initiate_mpesa_payment(self, request, order, phone_number):
-        """Initiate M-Pesa STK Push"""
+        """Initiate M-Pesa STK Push with improved callback handling"""
         logger.info(f"Initiating M-Pesa payment for order {order.order_number}, phone: {phone_number}, amount: {order.total_amount}")
         
         try:
@@ -1149,10 +1149,9 @@ class CheckoutView(View):
             logger.info(f"M-Pesa STK Push response: {response}")
             
             if response.get('ResponseCode') == '0':
-                # Get checkout request ID from response
                 checkout_request_id = response.get('CheckoutRequestID')
                 
-                # Create a Payment record
+                # Create Payment record
                 Payment.objects.create(
                     order=order,
                     checkout_request_id=checkout_request_id,
@@ -1160,18 +1159,26 @@ class CheckoutView(View):
                     raw_response=response
                 )
 
-                # Store checkout request ID for later verification
+                # Store in session
                 request.session['checkout_request_id'] = checkout_request_id
                 request.session['order_id'] = order.id
                 
+                # Store in cache for quick access
+                from django.core.cache import cache
+                cache.set(f"payment_status_{checkout_request_id}", {
+                    'status': 'PENDING',
+                    'order_number': order.order_number,
+                    'message': 'Payment initiated. Waiting for user to enter PIN...'
+                }, timeout=600)  # 10 minutes
+                
                 logger.info(f"STK Push successful. CheckoutRequestID: {checkout_request_id}")
                 
-                # Clear cart after successful payment initiation
+                # Clear cart
                 cart = self.get_cart(request)
                 cart.items.all().delete()
                 cart.delete()
                 
-                # Check if this is an AJAX request
+                # Return JSON response for AJAX
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
@@ -1186,7 +1193,7 @@ class CheckoutView(View):
                 error_msg = response.get('ResponseDescription', 'Unknown error')
                 logger.error(f"STK Push failed: {error_msg}")
                 messages.error(request, f"M-Pesa payment failed: {error_msg}")
-                order.delete()  # Clean up failed order
+                order.delete()
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1453,7 +1460,8 @@ class MpesaService:
 @csrf_exempt
 @require_POST
 def mpesa_callback(request):
-    """Handle M-Pesa callback"""
+    """Handle M-Pesa callback with improved response"""
+    logger.info("=" * 50)
     logger.info("M-Pesa callback received")
     logger.debug(f"Callback request body: {request.body}")
     
@@ -1464,7 +1472,8 @@ def mpesa_callback(request):
         checkout_request_id = stk_callback.get('CheckoutRequestID')
         result_desc = stk_callback.get('ResultDesc')
         
-        logger.info(f"Callback details - ResultCode: {result_code}, CheckoutRequestID: {checkout_request_id}, ResultDesc: {result_desc}")
+        logger.info(f"Callback details - ResultCode: {result_code}, CheckoutRequestID: {checkout_request_id}")
+        logger.info(f"ResultDesc: {result_desc}")
         
         # Find Payment by checkout_request_id
         payment = Payment.objects.filter(checkout_request_id=checkout_request_id).first()
@@ -1473,12 +1482,16 @@ def mpesa_callback(request):
             return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
         
         order = payment.order
+        logger.info(f"Found order: {order.order_number}")
+        
+        # Use cache for immediate frontend updates
+        from django.core.cache import cache
         
         if result_code == 0:  # Success
             callback_metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
             transaction_data = {item['Name']: item.get('Value') for item in callback_metadata}
             
-            logger.info(f"Transaction data: {transaction_data}")
+            logger.info(f"Transaction successful - Data: {transaction_data}")
             
             # Update payment record
             payment.status = "SUCCESS"
@@ -1491,45 +1504,50 @@ def mpesa_callback(request):
             
             # Update order status
             order.payment_status = "paid"
-            order.status = "confirmed"  # Change order status to confirmed
+            order.status = "processing"
             order.save()
             
-            # Store success info in session/cache for frontend polling
-            # This allows the frontend to know when payment is complete
-            from django.core.cache import cache
+            # Update cache immediately for frontend polling
             cache.set(f"payment_status_{checkout_request_id}", {
                 'status': 'SUCCESS',
                 'order_number': order.order_number,
+                'mpesa_receipt': payment.mpesa_receipt,
+                'message': 'Payment completed successfully!',
                 'redirect_url': reverse('order_confirmation', kwargs={'order_number': order.order_number})
-            }, timeout=300)  # 5 minutes
+            }, timeout=300)
             
-            logger.info(f"Payment completed - Receipt: {payment.mpesa_receipt}, Date: {payment.transaction_date}, Phone: {payment.phone_number}")
-            logger.info(f"Order {order.order_number} confirmed and ready for redirect")
+            logger.info(f"✓ Payment SUCCESS - Receipt: {payment.mpesa_receipt}")
+            logger.info(f"✓ Order {order.order_number} updated to 'processing'")
+            logger.info(f"✓ Cache updated for immediate frontend notification")
         
         else:  # Failed
+            logger.error(f"✗ Payment FAILED - Code: {result_code}, Desc: {result_desc}")
+            
             payment.status = "FAILED"
             payment.raw_response = callback_data
             payment.save()
             
             order.payment_status = "failed"
-            order.status = "cancelled"  # Mark order as cancelled
+            order.status = "cancelled"
             order.save()
             
-            # Store failure info in cache
-            from django.core.cache import cache
+            # Update cache for frontend
             cache.set(f"payment_status_{checkout_request_id}", {
                 'status': 'FAILED',
-                'message': result_desc,
+                'message': result_desc or 'Payment failed',
                 'redirect_url': reverse('checkout')
             }, timeout=300)
             
-            logger.error(f"Payment failed - ResultCode: {result_code}, ResultDesc: {result_desc}")
+            logger.info(f"✗ Order {order.order_number} marked as cancelled")
+            logger.info(f"✗ Cache updated with failure status")
         
+        logger.info("=" * 50)
         return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
     
     except Exception as e:
         logger.exception(f"Error processing callback: {str(e)}")
-        return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Error processing callback: {str(e)}'})
+        return JsonResponse({'ResultCode': 1, 'ResultDesc': f'Error: {str(e)}'})
+
 
 
 # Keep the rest of your existing functions...
@@ -1573,55 +1591,55 @@ def remove_coupon(request):
     
     return redirect('checkout')
 
+@require_GET
 def check_payment_status(request):
     """Check M-Pesa payment status via AJAX polling"""
     checkout_request_id = request.GET.get('checkout_request_id')
-    logger.info(f"Checking payment status for CheckoutRequestID: {checkout_request_id}")
+    logger.info(f"Status check request for: {checkout_request_id}")
     
     if not checkout_request_id:
         return JsonResponse({'error': 'Checkout request ID required'}, status=400)
     
     try:
-        # Check database first
-        payment = Payment.objects.filter(checkout_request_id=checkout_request_id).first()
-        
-        if payment:
-            if payment.status == "SUCCESS":
-                # Clear any stored cart items and coupon from session
-                if hasattr(request, 'session'):
-                    if 'coupon_code' in request.session:
-                        del request.session['coupon_code']
-                
-                return JsonResponse({
-                    'status': 'SUCCESS',
-                    'message': 'Payment completed successfully!',
-                    'order_number': payment.order.order_number,
-                    'redirect_url': reverse('order_confirmation', kwargs={'order_number': payment.order.order_number})
-                })
-            elif payment.status == "FAILED":
-                return JsonResponse({
-                    'status': 'FAILED',
-                    'message': 'Payment failed. Please try again.',
-                    'redirect_url': reverse('checkout')
-                })
-            else:
-                # Still pending
-                return JsonResponse({
-                    'status': 'PENDING',
-                    'message': 'Please complete the payment on your phone...'
-                })
-        
-        # If no payment found, check cache (fallback)
+        # Check cache first for instant response
         from django.core.cache import cache
         cached_status = cache.get(f"payment_status_{checkout_request_id}")
         
         if cached_status:
+            logger.info(f"Cache hit - Status: {cached_status.get('status')}")
             return JsonResponse(cached_status)
         
-        # Default pending response
+        # Check database
+        payment = Payment.objects.filter(checkout_request_id=checkout_request_id).first()
+        
+        if payment:
+            logger.info(f"Database check - Status: {payment.status}")
+            
+            if payment.status == "SUCCESS":
+                response_data = {
+                    'status': 'SUCCESS',
+                    'message': 'Payment completed successfully!',
+                    'order_number': payment.order.order_number,
+                    'mpesa_receipt': payment.mpesa_receipt,
+                    'redirect_url': reverse('order_confirmation', kwargs={'order_number': payment.order.order_number})
+                }
+                # Update cache
+                cache.set(f"payment_status_{checkout_request_id}", response_data, timeout=300)
+                return JsonResponse(response_data)
+                
+            elif payment.status == "FAILED":
+                response_data = {
+                    'status': 'FAILED',
+                    'message': 'Payment failed. Please try again.',
+                    'redirect_url': reverse('checkout')
+                }
+                cache.set(f"payment_status_{checkout_request_id}", response_data, timeout=300)
+                return JsonResponse(response_data)
+        
+        # Still pending
         return JsonResponse({
             'status': 'PENDING',
-            'message': 'Payment is being processed...'
+            'message': 'Waiting for payment confirmation...'
         })
         
     except Exception as e:
